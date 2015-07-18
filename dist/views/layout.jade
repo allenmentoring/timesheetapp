@@ -1,0 +1,96 @@
+doctype html
+html
+  head
+    title Timesheet - Allen
+
+    //To be filled later
+    link(href=linkCanonical, rel='canonical')
+    meta(content=pageTitle, name='title')
+    meta(content=pageDescription, name='description')
+
+    meta(itemprop='name', content=pageTitle)
+    meta(itemprop='description', content=pageDescription)
+    meta(itemprop='image', content=imageLink)
+
+    meta(name='twitter:card', content=imageLink)
+    //meta(name='twitter:title', content=twitterTitle)
+    //meta(name='twitter:description', content=twitterDescription)
+
+    //meta(name='twitter:image:src', content=imageLink)
+
+    meta(property='og:title', content=facebookTitle)
+    //meta(property='og:type', content='article')
+    meta(property='og:url', content=linkCanonical)
+    meta(property='og:image', content=imageLink)
+    meta(property='og:description', content=facebookDescription)
+    meta(property='og:site_name', content='')
+
+
+    //script(src='/javascripts/vendor/tracking.js')
+
+
+    if reload
+      script(src='/socket.io/socket.io.js')
+      script(src='/javascripts/reload-client.js')
+
+
+
+
+    link(href="/stylesheets/css/vendor/bootstrap.min.css", rel="stylesheet")
+    link(href="/stylesheets/css/flat-ui-pro.css", rel="stylesheet")
+    link(href="/stylesheets/fontello/fontello.css", rel="stylesheet")
+    link(href="/stylesheets/fontello/animation.css", rel="stylesheet")
+    link(href="/stylesheets/custom.css", rel="stylesheet")
+    link(href="/stylesheets/animate.css", rel="stylesheet")
+
+    //if lt IE 9
+      script(src="javascripts/vendor/html5shiv.js")
+      script(src="javascripts/vendor/respond.min.js")
+
+
+  body.bg-white
+
+      nav.bg-white.navbar.navbar-default.brn.pas.bbs(role="navigation")
+          .navbar-header
+              button.navbar-toggle(type="button", data-toggle="collapse", data-target="#navbar-collapse-01")
+                  span.sr-only Toggle navigation
+              a.navbar-brand.pbl.ptn.pln.prn(href='/')
+                  .row.man.pan
+                      .col-md-3.pts.pln
+                          img(src="/stylesheets/Icons/SVG/clocks.svg" alt="" width='40px')
+                      .col-md-6.pln.ptm.text-dark-gray2
+                          span TimesheetApp
+                          //p.mlm.font10.mbn.text-dark-gray &nbsp;&nbsp;BETA
+          #navbar-collapse-01.collapse.navbar-collapse(ng-controller="NavBarController")
+
+
+
+
+
+
+      .container.custom-container.container-handle(style='margin-bottom:200px;', data-root-url=rootUrl)
+        block content
+
+
+      //.bottom-menu.mbn.bg-white(style="border-top:1px solid #ddd")
+        .container
+            .row
+                .col-md-2.col-sm-2
+                    a.bottom-menu-brand(href="/")
+
+                .col-md-8.col-sm-8.text-center
+                    ul.bottom-menu-list
+                        li
+                            a(href="/about-us") About Us
+
+                        li
+                            a(href="/terms-privacy") Privacy & Terms
+
+                //.col-md-2.col-sm-2
+                    ul.bottom-menu-iconic-list
+                        li
+                            a.fui-pinterest(href="#fakelink")
+                        li
+                            a.fui-facebook(href="#fakelink")
+                        li
+                            a.fui-twitter(href="#fakelink")
