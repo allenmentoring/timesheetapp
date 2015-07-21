@@ -1,0 +1,86 @@
+extends layout
+
+block content
+
+    .row.man.pan(ng-controller='SignupController')
+        .col-md-12
+            .col-md-6.col-md-offset-3.pan
+                .col-md-12
+                    .jumbotron.bor.pam(style="background-color:#fff;border-radius:;margin-top:1%")
+                        .container
+                            fieldset
+                                legend
+                                    .row
+                                        .col-md-12
+                                            .col-md-6.col-md-offset-3
+                                                h5.light-weight
+                                                    img(src="stylesheets/Icons/SVG/clocks.svg" alt="" width='35px')
+                                                    | &nbsp;&nbsp;Add a new user
+
+
+
+
+                                form.signup-form(name="newUserForm")
+                                    .row
+                                        .col-md-6
+                                            .form-group.has-feedback
+                                                input.form-control.bor(name= 'firstName', type='text', placeholder='First name', ng-required="true", ng-minlength='3', ng-model="user.firstName")
+                                                span.form-control-feedback(ng-class="newUserForm.firstName.$valid ? 'icon-ok-circled  text-success' : 'icon-left-circled text-muted' ")
+                                        .col-md-6
+                                            .form-group.has-feedback
+                                                input.form-control.bor(name= 'lastName', type='text', placeholder='Last name', ng-required="true", ng-minlength='3', ng-model="user.lastName")
+                                                span.form-control-feedback(ng-class="newUserForm.lastName.$valid ? 'icon-ok-circled  text-success' : 'icon-left-circled text-muted' ")
+                                    .form-group.has-feedback
+                                        input.form-control.bor(name='email', type='email', placeholder='Email Address', ng-required="true", ng-model="user.email")
+                                        span.form-control-feedback(ng-class="newUserForm.email.$valid ? 'icon-ok-circled  text-success' : 'icon-left-circled text-muted' ")
+                                    .form-group.has-feedback
+                                        input.form-control.bor(name= 'password', type='password', placeholder='Password', ng-required="true", ng-minlength='6', ng-model="user.password")
+                                        span.form-control-feedback(ng-class="newUserForm.password.$valid ? 'icon-ok-circled  text-success' : 'icon-left-circled text-muted' ")
+
+                                    .row
+                                        .col-md-4
+                                            button.btn.btn-primary(ng-click="createNewUser(newUserForm)") ADD
+                                        .col-md-8
+                                            i.icon-spin5.animate-spin.text-muted.pull-right.ng-cloak(ng-show='alertInfo.spinner')
+                                            .alert.alert-danger.text-center.pas.font14.ng-cloak(ng-show='alertInfo.alert') {{alertInfo.alertMsg}}
+
+                    //.row.man.pan.ng-cloak(ng-show="alertInfo.showNotify")
+                        .col-md-11.pal
+                            input.form-control(type="email", ng-model="notifyEmail", placeholder="Enter your email address to get notified about our next batch")
+                        .col-md-1.pan.mtm
+                            .mtl.btn.btn-xs.btn-primary(ng-click="getNotified(notifyEmail)") Submit
+
+                    //.row.man.pan.ng-cloak(ng-show="alertInfo.showNotifyThanks")
+                        .col-md-12.text-center
+                            h6 Thanks.
+
+    .col-md-12.bts.bbs.pas.bg-grey-light
+        h4.man.text-center.text-dark-gray
+            i.icon-user
+            | Users List
+
+    .col-md-10.col-md-offset-1(ng-controller='RegisterController')
+        table.table.table-striped.table-hover.table-bordered.mtl.ptl
+            thead
+                tr
+                    th First Name
+                    th Last Name
+                    th Email Id
+                    th Password
+                    th
+                    th
+                    th
+            tbody
+                tr(ng-repeat="(userid, user) in users")
+                    td {{user.firstName}}
+                    td {{user.lastName}}
+                    td {{user.email}}
+                    td {{user.password}}
+                    td
+                        .btn.btn-xs(ng-class= "user.manager ? 'btn-primary' : 'btn-default'",ng-click='assignManager(user, userid)') Manager
+                    td
+                        .btn.btn-xs(ng-class= "user.mentor ? 'btn-primary' : 'btn-default'",ng-click='assignMentor(user, userid)') Mentor
+                    td
+                        .btn.btn-xs.btn-default(ng-click='sendEmail(user, userid)') Send Email
+
+

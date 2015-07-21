@@ -1,0 +1,100 @@
+p.normal{
+  font:italic 400 18px/1.3em 'Georgia' serif;
+  color:#405d5d;
+  padding:0;
+  margin:0;
+  margin-bottom:10px
+}
+a.normal{
+  font:italic 400 16px/1.3em 'Georgia';
+  text-decoration:none;
+  border-bottom: 1px solid #711912;
+  color:#711912
+}
+.button{
+  display:inline-block;
+  margin:0 auto 10px;
+  padding:10px 20px;
+  position:relative;
+  font:italic 400 16px/1.3em 'Georgia';
+  text-decoration:none;
+  color:#fff;
+  background-color:#405d5d;
+  text-align:center;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+.text-right{text-align: right;}
+.text-center{text-align: center;}
+
+/*CHAT*/
+.chat-left{
+  font:italic 400 16px/1.3em 'Georgia' serif;
+  color:#405d5d;
+  padding:15px;
+  margin:0;
+  margin-bottom:20px;
+  margin-right:50px;
+  background-color:#f0f0f0;
+}
+.chat-right{
+  font:italic 400 16px/1.3em 'Georgia' serif;
+  color:#405d5d;
+  padding:15px;
+  margin:0;
+  margin-bottom:20px;
+  margin-left:50px;
+  background-color:#f0f0f0;
+  text-align:right;
+}
+.chat .name{
+  color:#666;
+  font-size:14px;
+  display:block
+}
+
+/*RECEIPT TABLE*/
+.receipt-table{
+  background-color: #eee;
+  width: 460px;
+  position: relative;
+  margin: 30px auto;
+  padding: 0;
+}
+.receipt-table h2{
+  margin: 0;
+  padding: 10px 15px;
+  padding: 10px 15px;
+  color: #fff;
+  background-color: #405d5d;
+  font: normal 16px  'Georgia', serif;
+  }
+.receipt-table h3{
+  margin: 0;
+  }
+.receipt-table .dd,
+.receipt-table .dt,
+.receipt-table td{
+  color: #405d5d;
+  font: italic 13px 'Georgia', serif;
+}
+.receipt-table .dd{
+  float: left;
+  width: 120px;
+}
+.receipt-table .dt{
+  float: left;
+  width: 220px;
+  font-weight: bold;
+  clear: right;
+}
+.receipt-table .pad{
+  padding: 10px 15px;
+}
+.receipt-table .item{
+  width: 100%;
+  float: left;
+  display: block;
+  margin-bottom: 10px;
+}

@@ -1,0 +1,14 @@
+extends ../../layout
+block title
+    = "Hi " + first_name + ","
+block content
+    p.normal!= "Your credentials:&nbsp;"
+    p.normal
+        |Email id:&nbsp;
+        = emailId
+        //|&nbsp; - &nbsp;
+    p.normal
+        |Password: &nbsp;
+        = password
+
+    p.normal Thank you.

@@ -33,6 +33,12 @@ html
       script(src='/socket.io/socket.io.js')
       script(src='/javascripts/reload-client.js')
 
+    - if(minifiedSource)
+      script(src='/javascripts/vendor/requirejs/require.js', data-main='/builtExternal/applicationExternal.js')
+    - else
+      script(src='/javascripts/buildExternal.js')
+      script(src='/javascripts/vendor/requirejs/require.js', data-main='mainExternal.js')
+
 
 
 
@@ -62,6 +68,10 @@ html
                           span TimesheetApp
                           //p.mlm.font10.mbn.text-dark-gray &nbsp;&nbsp;BETA
           #navbar-collapse-01.collapse.navbar-collapse(ng-controller="NavBarController")
+              a.btn-xs.button.btn.btn-default.navbar-btn.btn-sm.pull-right.btn-embossed.mls.ng-cloak(ng-show="!loggedIn", href='/sign-in') Sign in
+              //a.btn-xs.button.btn.btn-primary.navbar-btn.btn-sm.pull-right.btn-embossed.mls.ng-cloak(ng-show="!loggedIn", href='/sign-up') Sign up
+              a.btn-xs.button.btn.btn-default.navbar-btn.btn-sm.pull-right.btn-embossed.mls.ng-cloak(ng-show="loggedIn", href='/app') Dashboard
+              button.btn.btn-danger.navbar-btn.btn-xs.pull-right.btn-embossed.ng-cloak(ng-show="loggedIn", ng-click="signOut($event)") Sign out
 
 
 

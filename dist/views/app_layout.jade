@@ -1,0 +1,70 @@
+doctype html
+html
+    head
+        title Timesheet
+        if reload
+            script(src='/socket.io/socket.io.js')
+            script(src='/javascripts/reload-client.js')
+        link(href="stylesheets/css/vendor/bootstrap.min.css", rel="stylesheet")
+        link(href="stylesheets/css/flat-ui-pro.css", rel="stylesheet")
+        link(href="stylesheets/fontello/fontello.css", rel="stylesheet")
+        link(href="stylesheets/fontello/animation.css", rel="stylesheet")
+        link(href="stylesheets/custom.css", rel="stylesheet")
+        link(href="stylesheets/animate.css", rel="stylesheet")
+
+        //if lt IE 9
+          script(src="javascripts/vendor/html5shiv.js")
+          script(src="javascripts/vendor/respond.min.js")
+
+        //script(src='/javascripts/vendor/requirejs/require.js', data-main='/built/application.js')
+        //script(src='/javascripts/vendor/requirejs/require.js')
+
+        - if(minifiedSource)
+            script(src='/javascripts/vendor/requirejs/require.js', data-main='/built/application.js')
+        - else
+            script(src='/javascripts/build.js')
+            script(src='/javascripts/vendor/requirejs/require.js', data-main='main.js')
+    body
+
+        nav.classroom-nav.bg-white.navbar.navbar-default.brn.bbs.mbn(role="navigation")
+            .navbar-header
+                button.navbar-toggle(type="button", data-toggle="collapse", data-target="#navbar-collapse-01")
+                    span.sr-only Toggle navigation
+                a.navbar-brand.pbl.ptn.pln.prn(ng-href="{{rootHref}}")
+                    .row.man.pan
+                        .col-md-2.pts.pls
+                            img(src="stylesheets/Icons/SVG/clocks.svg" alt="" width='40px')
+                        .col-md-6.pln.ptm
+                            span &nbsp;&nbsp;TimesheetApp
+                            //p.mlm.font10.mbn.text-dark-gray &nbsp;&nbsp;BETA
+            #navbar-collapse-01.collapse.navbar-collapse.ng-cloak(ng-controller="NavBarController")
+
+                .col-md-6.pan
+                    .col-md-11.pan
+                        h5.mbn.text-center.pan.text-6.ng-cloak.animate.slide-down(ng-show="currentCourse") {{currentCourseName}}
+
+                a.button.btn.btn-default.navbar-btn.btn-sm.pull-right.btn-embossed.mls.ng-cloak(ng-show="!loggedIn", href='/sign-in') Sign in
+                a.button.btn.btn-primary.navbar-btn.btn-sm.pull-right.btn-embossed.mls.ng-cloak(ng-show="!loggedIn", href='/sign-up') Sign up
+
+                div.ng-cloak(ng-show="authLoaded")
+                    button.btn.btn-danger.navbar-btn.btn-xs.pull-right.btn-embossed.ng-cloak.mls(ng-show="loggedIn", ng-click="signOut($event)") Sign out
+
+
+
+
+
+
+        .container.custom-container.reveal-animation(data-root-url=rootUrl, ng-view)
+            block content
+
+        .modal.ng-cloak.animate.bouncy-slide-top(ng-show="enableModal")
+            .modal-dialog
+                .modal-content
+                    .modal-header
+                        button.close.fui-cross(type="button", data-dismiss="modal", aria-hidden="true", ng-click="disableModal()")
+                        h4.modal-title.text-dark-gray2
+                            | {{modalHeader}}
+                    .modal-body
+                        p(ng-bind-html="modalContent")
+                    .modal-footer(ng-if='!noModalFooter')
+                        a.btn.btn-default.btn-wide(href="", ng-click="onModalButtonClick($event)") {{modalButtonText}}
