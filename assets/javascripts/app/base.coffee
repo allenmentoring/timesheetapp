@@ -1,7 +1,7 @@
-define ['angularjs', 'angularroute', 'basefileupload', 'sanitize', 'anganimate','fbase', 'afire'], (angular, route, basefileupload, sanitize, anganimate, Firebase, afire) ->
+define ['angularjs', 'angularroute', 'basefileupload', 'sanitize', 'anganimate','fbase', 'afire', 'uiboot'], (angular, route, basefileupload, sanitize, anganimate, Firebase, afire) ->
 
 
-  TimeSheetApp = angular.module('timeSheetApp', ['ngRoute', 'naif.base64', 'ngSanitize', 'ngAnimate', 'firebase']).config ([
+  TimeSheetApp = angular.module('timeSheetApp', ['ngRoute', 'naif.base64', 'ngSanitize', 'ngAnimate', 'firebase', 'ui.bootstrap']).config ([
                 '$routeProvider',
                 ($routeProvider) ->
 

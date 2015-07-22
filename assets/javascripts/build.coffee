@@ -20,6 +20,7 @@ require =
     moment: 'vendor/moment'
     afire: 'vendor/afire'
     bowser: 'vendor/bowser'
+    uiboot: 'vendor/ui-bootstrap'
 
   shim:
     angularjs:
@@ -45,7 +46,8 @@ require =
       exports: 'moment'
     afire:
       deps: ['fbase', 'angularjs']
-      exports: 'angular'
+    uiboot:
+      deps: ['angularjs']
     bowser:
       exports: 'bowser'
     flatUi:

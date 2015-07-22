@@ -1,5 +1,5 @@
 
-define ['app/base', 'fbase'], (CampaignCtrlApp, Firebase) ->
+define ['app/base', 'fbase'], (TimeSheetApp, Firebase) ->
 
 
   class FirebaseService
@@ -10,4 +10,4 @@ define ['app/base', 'fbase'], (CampaignCtrlApp, Firebase) ->
 
 
   FirebaseService.$inject = []
-  CampaignCtrlApp.service "FirebaseService", FirebaseService
+  TimeSheetApp.service "FirebaseService", FirebaseService

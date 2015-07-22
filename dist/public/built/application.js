@@ -5713,16 +5713,4853 @@ if ( typeof Object.getPrototypeOf !== "function" ) {
         return out;
     }
 })();
-define("afire", ["fbase","angularjs"], (function (global) {
-    return function () {
-        var ret, fn;
-        return ret || global.angular;
-    };
-}(this)));
+define("afire", ["fbase","angularjs"], function(){});
 
-define('app/base',['angularjs', 'angularroute', 'basefileupload', 'sanitize', 'anganimate', 'fbase', 'afire'], function(angular, route, basefileupload, sanitize, anganimate, Firebase, afire) {
+/*
+ * angular-ui-bootstrap
+ * http://angular-ui.github.io/bootstrap/
+
+ * Version: 0.13.0 - 2015-05-02
+ * License: MIT
+ */
+angular.module("ui.bootstrap", ["ui.bootstrap.tpls", "ui.bootstrap.collapse","ui.bootstrap.accordion","ui.bootstrap.alert","ui.bootstrap.bindHtml","ui.bootstrap.buttons","ui.bootstrap.carousel","ui.bootstrap.dateparser","ui.bootstrap.position","ui.bootstrap.datepicker","ui.bootstrap.dropdown","ui.bootstrap.modal","ui.bootstrap.pagination","ui.bootstrap.tooltip","ui.bootstrap.popover","ui.bootstrap.progressbar","ui.bootstrap.rating","ui.bootstrap.tabs","ui.bootstrap.timepicker","ui.bootstrap.transition","ui.bootstrap.typeahead"]);
+angular.module("ui.bootstrap.tpls", ["template/accordion/accordion-group.html","template/accordion/accordion.html","template/alert/alert.html","template/carousel/carousel.html","template/carousel/slide.html","template/datepicker/datepicker.html","template/datepicker/day.html","template/datepicker/month.html","template/datepicker/popup.html","template/datepicker/year.html","template/modal/backdrop.html","template/modal/window.html","template/pagination/pager.html","template/pagination/pagination.html","template/tooltip/tooltip-html-popup.html","template/tooltip/tooltip-html-unsafe-popup.html","template/tooltip/tooltip-popup.html","template/tooltip/tooltip-template-popup.html","template/popover/popover-template.html","template/popover/popover.html","template/progressbar/bar.html","template/progressbar/progress.html","template/progressbar/progressbar.html","template/rating/rating.html","template/tabs/tab.html","template/tabs/tabset.html","template/timepicker/timepicker.html","template/typeahead/typeahead-match.html","template/typeahead/typeahead-popup.html"]);
+angular.module('ui.bootstrap.collapse', [])
+
+    .directive('collapse', ['$animate', function ($animate) {
+
+        return {
+            link: function (scope, element, attrs) {
+                function expand() {
+                    element.removeClass('collapse').addClass('collapsing');
+                    $animate.addClass(element, 'in', {
+                        to: { height: element[0].scrollHeight + 'px' }
+                    }).then(expandDone);
+                }
+
+                function expandDone() {
+                    element.removeClass('collapsing');
+                    element.css({height: 'auto'});
+                }
+
+                function collapse() {
+                    element
+                        // IMPORTANT: The height must be set before adding "collapsing" class.
+                        // Otherwise, the browser attempts to animate from height 0 (in
+                        // collapsing class) to the given height here.
+                        .css({height: element[0].scrollHeight + 'px'})
+                        // initially all panel collapse have the collapse class, this removal
+                        // prevents the animation from jumping to collapsed state
+                        .removeClass('collapse')
+                        .addClass('collapsing');
+
+                    $animate.removeClass(element, 'in', {
+                        to: {height: '0'}
+                    }).then(collapseDone);
+                }
+
+                function collapseDone() {
+                    element.css({height: '0'}); // Required so that collapse works when animation is disabled
+                    element.removeClass('collapsing');
+                    element.addClass('collapse');
+                }
+
+                scope.$watch(attrs.collapse, function (shouldCollapse) {
+                    if (shouldCollapse) {
+                        collapse();
+                    } else {
+                        expand();
+                    }
+                });
+            }
+        };
+    }]);
+
+angular.module('ui.bootstrap.accordion', ['ui.bootstrap.collapse'])
+
+    .constant('accordionConfig', {
+        closeOthers: true
+    })
+
+    .controller('AccordionController', ['$scope', '$attrs', 'accordionConfig', function ($scope, $attrs, accordionConfig) {
+
+        // This array keeps track of the accordion groups
+        this.groups = [];
+
+        // Ensure that all the groups in this accordion are closed, unless close-others explicitly says not to
+        this.closeOthers = function(openGroup) {
+            var closeOthers = angular.isDefined($attrs.closeOthers) ? $scope.$eval($attrs.closeOthers) : accordionConfig.closeOthers;
+            if ( closeOthers ) {
+                angular.forEach(this.groups, function (group) {
+                    if ( group !== openGroup ) {
+                        group.isOpen = false;
+                    }
+                });
+            }
+        };
+
+        // This is called from the accordion-group directive to add itself to the accordion
+        this.addGroup = function(groupScope) {
+            var that = this;
+            this.groups.push(groupScope);
+
+            groupScope.$on('$destroy', function (event) {
+                that.removeGroup(groupScope);
+            });
+        };
+
+        // This is called from the accordion-group directive when to remove itself
+        this.removeGroup = function(group) {
+            var index = this.groups.indexOf(group);
+            if ( index !== -1 ) {
+                this.groups.splice(index, 1);
+            }
+        };
+
+    }])
+
+// The accordion directive simply sets up the directive controller
+// and adds an accordion CSS class to itself element.
+    .directive('accordion', function () {
+        return {
+            restrict:'EA',
+            controller:'AccordionController',
+            transclude: true,
+            replace: false,
+            templateUrl: 'template/accordion/accordion.html'
+        };
+    })
+
+// The accordion-group directive indicates a block of html that will expand and collapse in an accordion
+    .directive('accordionGroup', function() {
+        return {
+            require:'^accordion',         // We need this directive to be inside an accordion
+            restrict:'EA',
+            transclude:true,              // It transcludes the contents of the directive into the template
+            replace: true,                // The element containing the directive will be replaced with the template
+            templateUrl:'template/accordion/accordion-group.html',
+            scope: {
+                heading: '@',               // Interpolate the heading attribute onto this scope
+                isOpen: '=?',
+                isDisabled: '=?'
+            },
+            controller: function() {
+                this.setHeading = function(element) {
+                    this.heading = element;
+                };
+            },
+            link: function(scope, element, attrs, accordionCtrl) {
+                accordionCtrl.addGroup(scope);
+
+                scope.$watch('isOpen', function(value) {
+                    if ( value ) {
+                        accordionCtrl.closeOthers(scope);
+                    }
+                });
+
+                scope.toggleOpen = function() {
+                    if ( !scope.isDisabled ) {
+                        scope.isOpen = !scope.isOpen;
+                    }
+                };
+            }
+        };
+    })
+
+// Use accordion-heading below an accordion-group to provide a heading containing HTML
+// <accordion-group>
+//   <accordion-heading>Heading containing HTML - <img src="..."></accordion-heading>
+// </accordion-group>
+    .directive('accordionHeading', function() {
+        return {
+            restrict: 'EA',
+            transclude: true,   // Grab the contents to be used as the heading
+            template: '',       // In effect remove this element!
+            replace: true,
+            require: '^accordionGroup',
+            link: function(scope, element, attr, accordionGroupCtrl, transclude) {
+                // Pass the heading to the accordion-group controller
+                // so that it can be transcluded into the right place in the template
+                // [The second parameter to transclude causes the elements to be cloned so that they work in ng-repeat]
+                accordionGroupCtrl.setHeading(transclude(scope, angular.noop));
+            }
+        };
+    })
+
+// Use in the accordion-group template to indicate where you want the heading to be transcluded
+// You must provide the property on the accordion-group controller that will hold the transcluded element
+// <div class="accordion-group">
+//   <div class="accordion-heading" ><a ... accordion-transclude="heading">...</a></div>
+//   ...
+// </div>
+    .directive('accordionTransclude', function() {
+        return {
+            require: '^accordionGroup',
+            link: function(scope, element, attr, controller) {
+                scope.$watch(function() { return controller[attr.accordionTransclude]; }, function(heading) {
+                    if ( heading ) {
+                        element.html('');
+                        element.append(heading);
+                    }
+                });
+            }
+        };
+    })
+
+;
+
+angular.module('ui.bootstrap.alert', [])
+
+    .controller('AlertController', ['$scope', '$attrs', function ($scope, $attrs) {
+        $scope.closeable = 'close' in $attrs;
+        this.close = $scope.close;
+    }])
+
+    .directive('alert', function () {
+        return {
+            restrict:'EA',
+            controller:'AlertController',
+            templateUrl:'template/alert/alert.html',
+            transclude:true,
+            replace:true,
+            scope: {
+                type: '@',
+                close: '&'
+            }
+        };
+    })
+
+    .directive('dismissOnTimeout', ['$timeout', function($timeout) {
+        return {
+            require: 'alert',
+            link: function(scope, element, attrs, alertCtrl) {
+                $timeout(function(){
+                    alertCtrl.close();
+                }, parseInt(attrs.dismissOnTimeout, 10));
+            }
+        };
+    }]);
+
+angular.module('ui.bootstrap.bindHtml', [])
+
+    .directive('bindHtmlUnsafe', function () {
+        return function (scope, element, attr) {
+            element.addClass('ng-binding').data('$binding', attr.bindHtmlUnsafe);
+            scope.$watch(attr.bindHtmlUnsafe, function bindHtmlUnsafeWatchAction(value) {
+                element.html(value || '');
+            });
+        };
+    });
+angular.module('ui.bootstrap.buttons', [])
+
+    .constant('buttonConfig', {
+        activeClass: 'active',
+        toggleEvent: 'click'
+    })
+
+    .controller('ButtonsController', ['buttonConfig', function(buttonConfig) {
+        this.activeClass = buttonConfig.activeClass || 'active';
+        this.toggleEvent = buttonConfig.toggleEvent || 'click';
+    }])
+
+    .directive('btnRadio', function () {
+        return {
+            require: ['btnRadio', 'ngModel'],
+            controller: 'ButtonsController',
+            link: function (scope, element, attrs, ctrls) {
+                var buttonsCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+                //model -> UI
+                ngModelCtrl.$render = function () {
+                    element.toggleClass(buttonsCtrl.activeClass, angular.equals(ngModelCtrl.$modelValue, scope.$eval(attrs.btnRadio)));
+                };
+
+                //ui->model
+                element.bind(buttonsCtrl.toggleEvent, function () {
+                    var isActive = element.hasClass(buttonsCtrl.activeClass);
+
+                    if (!isActive || angular.isDefined(attrs.uncheckable)) {
+                        scope.$apply(function () {
+                            ngModelCtrl.$setViewValue(isActive ? null : scope.$eval(attrs.btnRadio));
+                            ngModelCtrl.$render();
+                        });
+                    }
+                });
+            }
+        };
+    })
+
+    .directive('btnCheckbox', function () {
+        return {
+            require: ['btnCheckbox', 'ngModel'],
+            controller: 'ButtonsController',
+            link: function (scope, element, attrs, ctrls) {
+                var buttonsCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+                function getTrueValue() {
+                    return getCheckboxValue(attrs.btnCheckboxTrue, true);
+                }
+
+                function getFalseValue() {
+                    return getCheckboxValue(attrs.btnCheckboxFalse, false);
+                }
+
+                function getCheckboxValue(attributeValue, defaultValue) {
+                    var val = scope.$eval(attributeValue);
+                    return angular.isDefined(val) ? val : defaultValue;
+                }
+
+                //model -> UI
+                ngModelCtrl.$render = function () {
+                    element.toggleClass(buttonsCtrl.activeClass, angular.equals(ngModelCtrl.$modelValue, getTrueValue()));
+                };
+
+                //ui->model
+                element.bind(buttonsCtrl.toggleEvent, function () {
+                    scope.$apply(function () {
+                        ngModelCtrl.$setViewValue(element.hasClass(buttonsCtrl.activeClass) ? getFalseValue() : getTrueValue());
+                        ngModelCtrl.$render();
+                    });
+                });
+            }
+        };
+    });
+
+/**
+ * @ngdoc overview
+ * @name ui.bootstrap.carousel
+ *
+ * @description
+ * AngularJS version of an image carousel.
+ *
+ */
+angular.module('ui.bootstrap.carousel', [])
+    .controller('CarouselController', ['$scope', '$interval', '$animate', function ($scope, $interval, $animate) {
+        var self = this,
+            slides = self.slides = $scope.slides = [],
+            currentIndex = -1,
+            currentInterval, isPlaying;
+        self.currentSlide = null;
+
+        var destroyed = false;
+        /* direction: "prev" or "next" */
+        self.select = $scope.select = function(nextSlide, direction) {
+            var nextIndex = self.indexOfSlide(nextSlide);
+            //Decide direction if it's not given
+            if (direction === undefined) {
+                direction = nextIndex > self.getCurrentIndex() ? 'next' : 'prev';
+            }
+            if (nextSlide && nextSlide !== self.currentSlide) {
+                goNext();
+            }
+            function goNext() {
+                // Scope has been destroyed, stop here.
+                if (destroyed) { return; }
+
+                angular.extend(nextSlide, {direction: direction, active: true});
+                angular.extend(self.currentSlide || {}, {direction: direction, active: false});
+                if ($animate.enabled() && !$scope.noTransition && nextSlide.$element) {
+                    $scope.$currentTransition = true;
+                    nextSlide.$element.one('$animate:close', function closeFn() {
+                        $scope.$currentTransition = null;
+                    });
+                }
+
+                self.currentSlide = nextSlide;
+                currentIndex = nextIndex;
+                //every time you change slides, reset the timer
+                restartTimer();
+            }
+        };
+        $scope.$on('$destroy', function () {
+            destroyed = true;
+        });
+
+        function getSlideByIndex(index) {
+            if (angular.isUndefined(slides[index].index)) {
+                return slides[index];
+            }
+            var i, len = slides.length;
+            for (i = 0; i < slides.length; ++i) {
+                if (slides[i].index == index) {
+                    return slides[i];
+                }
+            }
+        }
+
+        self.getCurrentIndex = function() {
+            if (self.currentSlide && angular.isDefined(self.currentSlide.index)) {
+                return +self.currentSlide.index;
+            }
+            return currentIndex;
+        };
+
+        /* Allow outside people to call indexOf on slides array */
+        self.indexOfSlide = function(slide) {
+            return angular.isDefined(slide.index) ? +slide.index : slides.indexOf(slide);
+        };
+
+        $scope.next = function() {
+            var newIndex = (self.getCurrentIndex() + 1) % slides.length;
+
+            //Prevent this user-triggered transition from occurring if there is already one in progress
+            if (!$scope.$currentTransition) {
+                return self.select(getSlideByIndex(newIndex), 'next');
+            }
+        };
+
+        $scope.prev = function() {
+            var newIndex = self.getCurrentIndex() - 1 < 0 ? slides.length - 1 : self.getCurrentIndex() - 1;
+
+            //Prevent this user-triggered transition from occurring if there is already one in progress
+            if (!$scope.$currentTransition) {
+                return self.select(getSlideByIndex(newIndex), 'prev');
+            }
+        };
+
+        $scope.isActive = function(slide) {
+            return self.currentSlide === slide;
+        };
+
+        $scope.$watch('interval', restartTimer);
+        $scope.$on('$destroy', resetTimer);
+
+        function restartTimer() {
+            resetTimer();
+            var interval = +$scope.interval;
+            if (!isNaN(interval) && interval > 0) {
+                currentInterval = $interval(timerFn, interval);
+            }
+        }
+
+        function resetTimer() {
+            if (currentInterval) {
+                $interval.cancel(currentInterval);
+                currentInterval = null;
+            }
+        }
+
+        function timerFn() {
+            var interval = +$scope.interval;
+            if (isPlaying && !isNaN(interval) && interval > 0) {
+                $scope.next();
+            } else {
+                $scope.pause();
+            }
+        }
+
+        $scope.play = function() {
+            if (!isPlaying) {
+                isPlaying = true;
+                restartTimer();
+            }
+        };
+        $scope.pause = function() {
+            if (!$scope.noPause) {
+                isPlaying = false;
+                resetTimer();
+            }
+        };
+
+        self.addSlide = function(slide, element) {
+            slide.$element = element;
+            slides.push(slide);
+            //if this is the first slide or the slide is set to active, select it
+            if(slides.length === 1 || slide.active) {
+                self.select(slides[slides.length-1]);
+                if (slides.length == 1) {
+                    $scope.play();
+                }
+            } else {
+                slide.active = false;
+            }
+        };
+
+        self.removeSlide = function(slide) {
+            if (angular.isDefined(slide.index)) {
+                slides.sort(function(a, b) {
+                    return +a.index > +b.index;
+                });
+            }
+            //get the index of the slide inside the carousel
+            var index = slides.indexOf(slide);
+            slides.splice(index, 1);
+            if (slides.length > 0 && slide.active) {
+                if (index >= slides.length) {
+                    self.select(slides[index-1]);
+                } else {
+                    self.select(slides[index]);
+                }
+            } else if (currentIndex > index) {
+                currentIndex--;
+            }
+        };
+
+    }])
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.carousel.directive:carousel
+ * @restrict EA
+ *
+ * @description
+ * Carousel is the outer container for a set of image 'slides' to showcase.
+ *
+ * @param {number=} interval The time, in milliseconds, that it will take the carousel to go to the next slide.
+ * @param {boolean=} noTransition Whether to disable transitions on the carousel.
+ * @param {boolean=} noPause Whether to disable pausing on the carousel (by default, the carousel interval pauses on hover).
+ *
+ * @example
+ <example module="ui.bootstrap">
+ <file name="index.html">
+ <carousel>
+ <slide>
+ <img src="http://placekitten.com/150/150" style="margin:auto;">
+ <div class="carousel-caption">
+ <p>Beautiful!</p>
+ </div>
+ </slide>
+ <slide>
+ <img src="http://placekitten.com/100/150" style="margin:auto;">
+ <div class="carousel-caption">
+ <p>D'aww!</p>
+ </div>
+ </slide>
+ </carousel>
+ </file>
+ <file name="demo.css">
+ .carousel-indicators {
+      top: auto;
+      bottom: 15px;
+    }
+ </file>
+ </example>
+ */
+    .directive('carousel', [function() {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            controller: 'CarouselController',
+            require: 'carousel',
+            templateUrl: 'template/carousel/carousel.html',
+            scope: {
+                interval: '=',
+                noTransition: '=',
+                noPause: '='
+            }
+        };
+    }])
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.carousel.directive:slide
+ * @restrict EA
+ *
+ * @description
+ * Creates a slide inside a {@link ui.bootstrap.carousel.directive:carousel carousel}.  Must be placed as a child of a carousel element.
+ *
+ * @param {boolean=} active Model binding, whether or not this slide is currently active.
+ * @param {number=} index The index of the slide. The slides will be sorted by this parameter.
+ *
+ * @example
+ <example module="ui.bootstrap">
+ <file name="index.html">
+ <div ng-controller="CarouselDemoCtrl">
+ <carousel>
+ <slide ng-repeat="slide in slides" active="slide.active" index="$index">
+ <img ng-src="{{slide.image}}" style="margin:auto;">
+ <div class="carousel-caption">
+ <h4>Slide {{$index}}</h4>
+ <p>{{slide.text}}</p>
+ </div>
+ </slide>
+ </carousel>
+ Interval, in milliseconds: <input type="number" ng-model="myInterval">
+ <br />Enter a negative number to stop the interval.
+ </div>
+ </file>
+ <file name="script.js">
+ function CarouselDemoCtrl($scope) {
+  $scope.myInterval = 5000;
+}
+ </file>
+ <file name="demo.css">
+ .carousel-indicators {
+      top: auto;
+      bottom: 15px;
+    }
+ </file>
+ </example>
+ */
+
+    .directive('slide', function() {
+        return {
+            require: '^carousel',
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            templateUrl: 'template/carousel/slide.html',
+            scope: {
+                active: '=?',
+                index: '=?'
+            },
+            link: function (scope, element, attrs, carouselCtrl) {
+                carouselCtrl.addSlide(scope, element);
+                //when the scope is destroyed then remove the slide from the current slides array
+                scope.$on('$destroy', function() {
+                    carouselCtrl.removeSlide(scope);
+                });
+
+                scope.$watch('active', function(active) {
+                    if (active) {
+                        carouselCtrl.select(scope);
+                    }
+                });
+            }
+        };
+    })
+
+    .animation('.item', [
+        '$animate',
+        function ($animate) {
+            return {
+                beforeAddClass: function (element, className, done) {
+                    // Due to transclusion, noTransition property is on parent's scope
+                    if (className == 'active' && element.parent() &&
+                        !element.parent().scope().noTransition) {
+                        var stopped = false;
+                        var direction = element.isolateScope().direction;
+                        var directionClass = direction == 'next' ? 'left' : 'right';
+                        element.addClass(direction);
+                        $animate.addClass(element, directionClass).then(function () {
+                            if (!stopped) {
+                                element.removeClass(directionClass + ' ' + direction);
+                            }
+                            done();
+                        });
+
+                        return function () {
+                            stopped = true;
+                        };
+                    }
+                    done();
+                },
+                beforeRemoveClass: function (element, className, done) {
+                    // Due to transclusion, noTransition property is on parent's scope
+                    if (className == 'active' && element.parent() &&
+                        !element.parent().scope().noTransition) {
+                        var stopped = false;
+                        var direction = element.isolateScope().direction;
+                        var directionClass = direction == 'next' ? 'left' : 'right';
+                        $animate.addClass(element, directionClass).then(function () {
+                            if (!stopped) {
+                                element.removeClass(directionClass);
+                            }
+                            done();
+                        });
+                        return function () {
+                            stopped = true;
+                        };
+                    }
+                    done();
+                }
+            };
+
+        }])
+
+
+;
+
+angular.module('ui.bootstrap.dateparser', [])
+
+    .service('dateParser', ['$locale', 'orderByFilter', function($locale, orderByFilter) {
+        // Pulled from https://github.com/mbostock/d3/blob/master/src/format/requote.js
+        var SPECIAL_CHARACTERS_REGEXP = /[\\\^\$\*\+\?\|\[\]\(\)\.\{\}]/g;
+
+        this.parsers = {};
+
+        var formatCodeToRegex = {
+            'yyyy': {
+                regex: '\\d{4}',
+                apply: function(value) { this.year = +value; }
+            },
+            'yy': {
+                regex: '\\d{2}',
+                apply: function(value) { this.year = +value + 2000; }
+            },
+            'y': {
+                regex: '\\d{1,4}',
+                apply: function(value) { this.year = +value; }
+            },
+            'MMMM': {
+                regex: $locale.DATETIME_FORMATS.MONTH.join('|'),
+                apply: function(value) { this.month = $locale.DATETIME_FORMATS.MONTH.indexOf(value); }
+            },
+            'MMM': {
+                regex: $locale.DATETIME_FORMATS.SHORTMONTH.join('|'),
+                apply: function(value) { this.month = $locale.DATETIME_FORMATS.SHORTMONTH.indexOf(value); }
+            },
+            'MM': {
+                regex: '0[1-9]|1[0-2]',
+                apply: function(value) { this.month = value - 1; }
+            },
+            'M': {
+                regex: '[1-9]|1[0-2]',
+                apply: function(value) { this.month = value - 1; }
+            },
+            'dd': {
+                regex: '[0-2][0-9]{1}|3[0-1]{1}',
+                apply: function(value) { this.date = +value; }
+            },
+            'd': {
+                regex: '[1-2]?[0-9]{1}|3[0-1]{1}',
+                apply: function(value) { this.date = +value; }
+            },
+            'EEEE': {
+                regex: $locale.DATETIME_FORMATS.DAY.join('|')
+            },
+            'EEE': {
+                regex: $locale.DATETIME_FORMATS.SHORTDAY.join('|')
+            },
+            'HH': {
+                regex: '(?:0|1)[0-9]|2[0-3]',
+                apply: function(value) { this.hours = +value; }
+            },
+            'H': {
+                regex: '1?[0-9]|2[0-3]',
+                apply: function(value) { this.hours = +value; }
+            },
+            'mm': {
+                regex: '[0-5][0-9]',
+                apply: function(value) { this.minutes = +value; }
+            },
+            'm': {
+                regex: '[0-9]|[1-5][0-9]',
+                apply: function(value) { this.minutes = +value; }
+            },
+            'sss': {
+                regex: '[0-9][0-9][0-9]',
+                apply: function(value) { this.milliseconds = +value; }
+            },
+            'ss': {
+                regex: '[0-5][0-9]',
+                apply: function(value) { this.seconds = +value; }
+            },
+            's': {
+                regex: '[0-9]|[1-5][0-9]',
+                apply: function(value) { this.seconds = +value; }
+            }
+        };
+
+        function createParser(format) {
+            var map = [], regex = format.split('');
+
+            angular.forEach(formatCodeToRegex, function(data, code) {
+                var index = format.indexOf(code);
+
+                if (index > -1) {
+                    format = format.split('');
+
+                    regex[index] = '(' + data.regex + ')';
+                    format[index] = '$'; // Custom symbol to define consumed part of format
+                    for (var i = index + 1, n = index + code.length; i < n; i++) {
+                        regex[i] = '';
+                        format[i] = '$';
+                    }
+                    format = format.join('');
+
+                    map.push({ index: index, apply: data.apply });
+                }
+            });
+
+            return {
+                regex: new RegExp('^' + regex.join('') + '$'),
+                map: orderByFilter(map, 'index')
+            };
+        }
+
+        this.parse = function(input, format, baseDate) {
+            if ( !angular.isString(input) || !format ) {
+                return input;
+            }
+
+            format = $locale.DATETIME_FORMATS[format] || format;
+            format = format.replace(SPECIAL_CHARACTERS_REGEXP, '\\$&');
+
+            if ( !this.parsers[format] ) {
+                this.parsers[format] = createParser(format);
+            }
+
+            var parser = this.parsers[format],
+                regex = parser.regex,
+                map = parser.map,
+                results = input.match(regex);
+
+            if ( results && results.length ) {
+                var fields, dt;
+                if (baseDate) {
+                    fields = {
+                        year: baseDate.getFullYear(),
+                        month: baseDate.getMonth(),
+                        date: baseDate.getDate(),
+                        hours: baseDate.getHours(),
+                        minutes: baseDate.getMinutes(),
+                        seconds: baseDate.getSeconds(),
+                        milliseconds: baseDate.getMilliseconds()
+                    };
+                } else {
+                    fields = { year: 1900, month: 0, date: 1, hours: 0, minutes: 0, seconds: 0, milliseconds: 0 };
+                }
+
+                for( var i = 1, n = results.length; i < n; i++ ) {
+                    var mapper = map[i-1];
+                    if ( mapper.apply ) {
+                        mapper.apply.call(fields, results[i]);
+                    }
+                }
+
+                if ( isValid(fields.year, fields.month, fields.date) ) {
+                    dt = new Date(fields.year, fields.month, fields.date, fields.hours, fields.minutes, fields.seconds,
+                        fields.milliseconds || 0);
+                }
+
+                return dt;
+            }
+        };
+
+        // Check if date is valid for specific month (and year for February).
+        // Month: 0 = Jan, 1 = Feb, etc
+        function isValid(year, month, date) {
+            if (date < 1) {
+                return false;
+            }
+
+            if ( month === 1 && date > 28) {
+                return date === 29 && ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0);
+            }
+
+            if ( month === 3 || month === 5 || month === 8 || month === 10) {
+                return date < 31;
+            }
+
+            return true;
+        }
+    }]);
+
+angular.module('ui.bootstrap.position', [])
+
+/**
+ * A set of utility methods that can be use to retrieve position of DOM elements.
+ * It is meant to be used where we need to absolute-position DOM elements in
+ * relation to other, existing elements (this is the case for tooltips, popovers,
+ * typeahead suggestions etc.).
+ */
+    .factory('$position', ['$document', '$window', function ($document, $window) {
+
+        function getStyle(el, cssprop) {
+            if (el.currentStyle) { //IE
+                return el.currentStyle[cssprop];
+            } else if ($window.getComputedStyle) {
+                return $window.getComputedStyle(el)[cssprop];
+            }
+            // finally try and get inline style
+            return el.style[cssprop];
+        }
+
+        /**
+         * Checks if a given element is statically positioned
+         * @param element - raw DOM element
+         */
+        function isStaticPositioned(element) {
+            return (getStyle(element, 'position') || 'static' ) === 'static';
+        }
+
+        /**
+         * returns the closest, non-statically positioned parentOffset of a given element
+         * @param element
+         */
+        var parentOffsetEl = function (element) {
+            var docDomEl = $document[0];
+            var offsetParent = element.offsetParent || docDomEl;
+            while (offsetParent && offsetParent !== docDomEl && isStaticPositioned(offsetParent) ) {
+                offsetParent = offsetParent.offsetParent;
+            }
+            return offsetParent || docDomEl;
+        };
+
+        return {
+            /**
+             * Provides read-only equivalent of jQuery's position function:
+             * http://api.jquery.com/position/
+             */
+            position: function (element) {
+                var elBCR = this.offset(element);
+                var offsetParentBCR = { top: 0, left: 0 };
+                var offsetParentEl = parentOffsetEl(element[0]);
+                if (offsetParentEl != $document[0]) {
+                    offsetParentBCR = this.offset(angular.element(offsetParentEl));
+                    offsetParentBCR.top += offsetParentEl.clientTop - offsetParentEl.scrollTop;
+                    offsetParentBCR.left += offsetParentEl.clientLeft - offsetParentEl.scrollLeft;
+                }
+
+                var boundingClientRect = element[0].getBoundingClientRect();
+                return {
+                    width: boundingClientRect.width || element.prop('offsetWidth'),
+                    height: boundingClientRect.height || element.prop('offsetHeight'),
+                    top: elBCR.top - offsetParentBCR.top,
+                    left: elBCR.left - offsetParentBCR.left
+                };
+            },
+
+            /**
+             * Provides read-only equivalent of jQuery's offset function:
+             * http://api.jquery.com/offset/
+             */
+            offset: function (element) {
+                var boundingClientRect = element[0].getBoundingClientRect();
+                return {
+                    width: boundingClientRect.width || element.prop('offsetWidth'),
+                    height: boundingClientRect.height || element.prop('offsetHeight'),
+                    top: boundingClientRect.top + ($window.pageYOffset || $document[0].documentElement.scrollTop),
+                    left: boundingClientRect.left + ($window.pageXOffset || $document[0].documentElement.scrollLeft)
+                };
+            },
+
+            /**
+             * Provides coordinates for the targetEl in relation to hostEl
+             */
+            positionElements: function (hostEl, targetEl, positionStr, appendToBody) {
+
+                var positionStrParts = positionStr.split('-');
+                var pos0 = positionStrParts[0], pos1 = positionStrParts[1] || 'center';
+
+                var hostElPos,
+                    targetElWidth,
+                    targetElHeight,
+                    targetElPos;
+
+                hostElPos = appendToBody ? this.offset(hostEl) : this.position(hostEl);
+
+                targetElWidth = targetEl.prop('offsetWidth');
+                targetElHeight = targetEl.prop('offsetHeight');
+
+                var shiftWidth = {
+                    center: function () {
+                        return hostElPos.left + hostElPos.width / 2 - targetElWidth / 2;
+                    },
+                    left: function () {
+                        return hostElPos.left;
+                    },
+                    right: function () {
+                        return hostElPos.left + hostElPos.width;
+                    }
+                };
+
+                var shiftHeight = {
+                    center: function () {
+                        return hostElPos.top + hostElPos.height / 2 - targetElHeight / 2;
+                    },
+                    top: function () {
+                        return hostElPos.top;
+                    },
+                    bottom: function () {
+                        return hostElPos.top + hostElPos.height;
+                    }
+                };
+
+                switch (pos0) {
+                    case 'right':
+                        targetElPos = {
+                            top: shiftHeight[pos1](),
+                            left: shiftWidth[pos0]()
+                        };
+                        break;
+                    case 'left':
+                        targetElPos = {
+                            top: shiftHeight[pos1](),
+                            left: hostElPos.left - targetElWidth
+                        };
+                        break;
+                    case 'bottom':
+                        targetElPos = {
+                            top: shiftHeight[pos0](),
+                            left: shiftWidth[pos1]()
+                        };
+                        break;
+                    default:
+                        targetElPos = {
+                            top: hostElPos.top - targetElHeight,
+                            left: shiftWidth[pos1]()
+                        };
+                        break;
+                }
+
+                return targetElPos;
+            }
+        };
+    }]);
+
+angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootstrap.position'])
+
+    .constant('datepickerConfig', {
+        formatDay: 'dd',
+        formatMonth: 'MMMM',
+        formatYear: 'yyyy',
+        formatDayHeader: 'EEE',
+        formatDayTitle: 'MMMM yyyy',
+        formatMonthTitle: 'yyyy',
+        datepickerMode: 'day',
+        minMode: 'day',
+        maxMode: 'year',
+        showWeeks: true,
+        startingDay: 0,
+        yearRange: 20,
+        minDate: null,
+        maxDate: null,
+        shortcutPropagation: false
+    })
+
+    .controller('DatepickerController', ['$scope', '$attrs', '$parse', '$interpolate', '$timeout', '$log', 'dateFilter', 'datepickerConfig', function($scope, $attrs, $parse, $interpolate, $timeout, $log, dateFilter, datepickerConfig) {
+        var self = this,
+            ngModelCtrl = { $setViewValue: angular.noop }; // nullModelCtrl;
+
+        // Modes chain
+        this.modes = ['day', 'month', 'year'];
+
+        // Configuration attributes
+        angular.forEach(['formatDay', 'formatMonth', 'formatYear', 'formatDayHeader', 'formatDayTitle', 'formatMonthTitle',
+            'minMode', 'maxMode', 'showWeeks', 'startingDay', 'yearRange', 'shortcutPropagation'], function( key, index ) {
+            self[key] = angular.isDefined($attrs[key]) ? (index < 8 ? $interpolate($attrs[key])($scope.$parent) : $scope.$parent.$eval($attrs[key])) : datepickerConfig[key];
+        });
+
+        // Watchable date attributes
+        angular.forEach(['minDate', 'maxDate'], function( key ) {
+            if ( $attrs[key] ) {
+                $scope.$parent.$watch($parse($attrs[key]), function(value) {
+                    self[key] = value ? new Date(value) : null;
+                    self.refreshView();
+                });
+            } else {
+                self[key] = datepickerConfig[key] ? new Date(datepickerConfig[key]) : null;
+            }
+        });
+
+        $scope.datepickerMode = $scope.datepickerMode || datepickerConfig.datepickerMode;
+        $scope.maxMode = self.maxMode;
+        $scope.uniqueId = 'datepicker-' + $scope.$id + '-' + Math.floor(Math.random() * 10000);
+
+        if(angular.isDefined($attrs.initDate)) {
+            this.activeDate = $scope.$parent.$eval($attrs.initDate) || new Date();
+            $scope.$parent.$watch($attrs.initDate, function(initDate){
+                if(initDate && (ngModelCtrl.$isEmpty(ngModelCtrl.$modelValue) || ngModelCtrl.$invalid)){
+                    self.activeDate = initDate;
+                    self.refreshView();
+                }
+            });
+        } else {
+            this.activeDate =  new Date();
+        }
+
+        $scope.isActive = function(dateObject) {
+            if (self.compare(dateObject.date, self.activeDate) === 0) {
+                $scope.activeDateId = dateObject.uid;
+                return true;
+            }
+            return false;
+        };
+
+        this.init = function( ngModelCtrl_ ) {
+            ngModelCtrl = ngModelCtrl_;
+
+            ngModelCtrl.$render = function() {
+                self.render();
+            };
+        };
+
+        this.render = function() {
+            if ( ngModelCtrl.$viewValue ) {
+                var date = new Date( ngModelCtrl.$viewValue ),
+                    isValid = !isNaN(date);
+
+                if ( isValid ) {
+                    this.activeDate = date;
+                } else {
+                    $log.error('Datepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
+                }
+                ngModelCtrl.$setValidity('date', isValid);
+            }
+            this.refreshView();
+        };
+
+        this.refreshView = function() {
+            if ( this.element ) {
+                this._refreshView();
+
+                var date = ngModelCtrl.$viewValue ? new Date(ngModelCtrl.$viewValue) : null;
+                ngModelCtrl.$setValidity('date-disabled', !date || (this.element && !this.isDisabled(date)));
+            }
+        };
+
+        this.createDateObject = function(date, format) {
+            var model = ngModelCtrl.$viewValue ? new Date(ngModelCtrl.$viewValue) : null;
+            return {
+                date: date,
+                label: dateFilter(date, format),
+                selected: model && this.compare(date, model) === 0,
+                disabled: this.isDisabled(date),
+                current: this.compare(date, new Date()) === 0,
+                customClass: this.customClass(date)
+            };
+        };
+
+        this.isDisabled = function( date ) {
+            return ((this.minDate && this.compare(date, this.minDate) < 0) || (this.maxDate && this.compare(date, this.maxDate) > 0) || ($attrs.dateDisabled && $scope.dateDisabled({date: date, mode: $scope.datepickerMode})));
+        };
+
+        this.customClass = function( date ) {
+            return $scope.customClass({date: date, mode: $scope.datepickerMode});
+        };
+
+        // Split array into smaller arrays
+        this.split = function(arr, size) {
+            var arrays = [];
+            while (arr.length > 0) {
+                arrays.push(arr.splice(0, size));
+            }
+            return arrays;
+        };
+
+        $scope.select = function( date ) {
+            if ( $scope.datepickerMode === self.minMode ) {
+                var dt = ngModelCtrl.$viewValue ? new Date( ngModelCtrl.$viewValue ) : new Date(0, 0, 0, 0, 0, 0, 0);
+                dt.setFullYear( date.getFullYear(), date.getMonth(), date.getDate() );
+                ngModelCtrl.$setViewValue( dt );
+                ngModelCtrl.$render();
+            } else {
+                self.activeDate = date;
+                $scope.datepickerMode = self.modes[ self.modes.indexOf( $scope.datepickerMode ) - 1 ];
+            }
+        };
+
+        $scope.move = function( direction ) {
+            var year = self.activeDate.getFullYear() + direction * (self.step.years || 0),
+                month = self.activeDate.getMonth() + direction * (self.step.months || 0);
+            self.activeDate.setFullYear(year, month, 1);
+            self.refreshView();
+        };
+
+        $scope.toggleMode = function( direction ) {
+            direction = direction || 1;
+
+            if (($scope.datepickerMode === self.maxMode && direction === 1) || ($scope.datepickerMode === self.minMode && direction === -1)) {
+                return;
+            }
+
+            $scope.datepickerMode = self.modes[ self.modes.indexOf( $scope.datepickerMode ) + direction ];
+        };
+
+        // Key event mapper
+        $scope.keys = { 13:'enter', 32:'space', 33:'pageup', 34:'pagedown', 35:'end', 36:'home', 37:'left', 38:'up', 39:'right', 40:'down' };
+
+        var focusElement = function() {
+            $timeout(function() {
+                self.element[0].focus();
+            }, 0 , false);
+        };
+
+        // Listen for focus requests from popup directive
+        $scope.$on('datepicker.focus', focusElement);
+
+        $scope.keydown = function( evt ) {
+            var key = $scope.keys[evt.which];
+
+            if ( !key || evt.shiftKey || evt.altKey ) {
+                return;
+            }
+
+            evt.preventDefault();
+            if(!self.shortcutPropagation){
+                evt.stopPropagation();
+            }
+
+            if (key === 'enter' || key === 'space') {
+                if ( self.isDisabled(self.activeDate)) {
+                    return; // do nothing
+                }
+                $scope.select(self.activeDate);
+                focusElement();
+            } else if (evt.ctrlKey && (key === 'up' || key === 'down')) {
+                $scope.toggleMode(key === 'up' ? 1 : -1);
+                focusElement();
+            } else {
+                self.handleKeyDown(key, evt);
+                self.refreshView();
+            }
+        };
+    }])
+
+    .directive( 'datepicker', function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            templateUrl: 'template/datepicker/datepicker.html',
+            scope: {
+                datepickerMode: '=?',
+                dateDisabled: '&',
+                customClass: '&',
+                shortcutPropagation: '&?'
+            },
+            require: ['datepicker', '?^ngModel'],
+            controller: 'DatepickerController',
+            link: function(scope, element, attrs, ctrls) {
+                var datepickerCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+                if ( ngModelCtrl ) {
+                    datepickerCtrl.init( ngModelCtrl );
+                }
+            }
+        };
+    })
+
+    .directive('daypicker', ['dateFilter', function (dateFilter) {
+        return {
+            restrict: 'EA',
+            replace: true,
+            templateUrl: 'template/datepicker/day.html',
+            require: '^datepicker',
+            link: function(scope, element, attrs, ctrl) {
+                scope.showWeeks = ctrl.showWeeks;
+
+                ctrl.step = { months: 1 };
+                ctrl.element = element;
+
+                var DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+                function getDaysInMonth( year, month ) {
+                    return ((month === 1) && (year % 4 === 0) && ((year % 100 !== 0) || (year % 400 === 0))) ? 29 : DAYS_IN_MONTH[month];
+                }
+
+                function getDates(startDate, n) {
+                    var dates = new Array(n), current = new Date(startDate), i = 0;
+                    current.setHours(12); // Prevent repeated dates because of timezone bug
+                    while ( i < n ) {
+                        dates[i++] = new Date(current);
+                        current.setDate( current.getDate() + 1 );
+                    }
+                    return dates;
+                }
+
+                ctrl._refreshView = function() {
+                    var year = ctrl.activeDate.getFullYear(),
+                        month = ctrl.activeDate.getMonth(),
+                        firstDayOfMonth = new Date(year, month, 1),
+                        difference = ctrl.startingDay - firstDayOfMonth.getDay(),
+                        numDisplayedFromPreviousMonth = (difference > 0) ? 7 - difference : - difference,
+                        firstDate = new Date(firstDayOfMonth);
+
+                    if ( numDisplayedFromPreviousMonth > 0 ) {
+                        firstDate.setDate( - numDisplayedFromPreviousMonth + 1 );
+                    }
+
+                    // 42 is the number of days on a six-month calendar
+                    var days = getDates(firstDate, 42);
+                    for (var i = 0; i < 42; i ++) {
+                        days[i] = angular.extend(ctrl.createDateObject(days[i], ctrl.formatDay), {
+                            secondary: days[i].getMonth() !== month,
+                            uid: scope.uniqueId + '-' + i
+                        });
+                    }
+
+                    scope.labels = new Array(7);
+                    for (var j = 0; j < 7; j++) {
+                        scope.labels[j] = {
+                            abbr: dateFilter(days[j].date, ctrl.formatDayHeader),
+                            full: dateFilter(days[j].date, 'EEEE')
+                        };
+                    }
+
+                    scope.title = dateFilter(ctrl.activeDate, ctrl.formatDayTitle);
+                    scope.rows = ctrl.split(days, 7);
+
+                    if ( scope.showWeeks ) {
+                        scope.weekNumbers = [];
+                        var thursdayIndex = (4 + 7 - ctrl.startingDay) % 7,
+                            numWeeks = scope.rows.length;
+                        for (var curWeek = 0; curWeek < numWeeks; curWeek++) {
+                            scope.weekNumbers.push(
+                                getISO8601WeekNumber( scope.rows[curWeek][thursdayIndex].date ));
+                        }
+                    }
+                };
+
+                ctrl.compare = function(date1, date2) {
+                    return (new Date( date1.getFullYear(), date1.getMonth(), date1.getDate() ) - new Date( date2.getFullYear(), date2.getMonth(), date2.getDate() ) );
+                };
+
+                function getISO8601WeekNumber(date) {
+                    var checkDate = new Date(date);
+                    checkDate.setDate(checkDate.getDate() + 4 - (checkDate.getDay() || 7)); // Thursday
+                    var time = checkDate.getTime();
+                    checkDate.setMonth(0); // Compare with Jan 1
+                    checkDate.setDate(1);
+                    return Math.floor(Math.round((time - checkDate) / 86400000) / 7) + 1;
+                }
+
+                ctrl.handleKeyDown = function( key, evt ) {
+                    var date = ctrl.activeDate.getDate();
+
+                    if (key === 'left') {
+                        date = date - 1;   // up
+                    } else if (key === 'up') {
+                        date = date - 7;   // down
+                    } else if (key === 'right') {
+                        date = date + 1;   // down
+                    } else if (key === 'down') {
+                        date = date + 7;
+                    } else if (key === 'pageup' || key === 'pagedown') {
+                        var month = ctrl.activeDate.getMonth() + (key === 'pageup' ? - 1 : 1);
+                        ctrl.activeDate.setMonth(month, 1);
+                        date = Math.min(getDaysInMonth(ctrl.activeDate.getFullYear(), ctrl.activeDate.getMonth()), date);
+                    } else if (key === 'home') {
+                        date = 1;
+                    } else if (key === 'end') {
+                        date = getDaysInMonth(ctrl.activeDate.getFullYear(), ctrl.activeDate.getMonth());
+                    }
+                    ctrl.activeDate.setDate(date);
+                };
+
+                ctrl.refreshView();
+            }
+        };
+    }])
+
+    .directive('monthpicker', ['dateFilter', function (dateFilter) {
+        return {
+            restrict: 'EA',
+            replace: true,
+            templateUrl: 'template/datepicker/month.html',
+            require: '^datepicker',
+            link: function(scope, element, attrs, ctrl) {
+                ctrl.step = { years: 1 };
+                ctrl.element = element;
+
+                ctrl._refreshView = function() {
+                    var months = new Array(12),
+                        year = ctrl.activeDate.getFullYear();
+
+                    for ( var i = 0; i < 12; i++ ) {
+                        months[i] = angular.extend(ctrl.createDateObject(new Date(year, i, 1), ctrl.formatMonth), {
+                            uid: scope.uniqueId + '-' + i
+                        });
+                    }
+
+                    scope.title = dateFilter(ctrl.activeDate, ctrl.formatMonthTitle);
+                    scope.rows = ctrl.split(months, 3);
+                };
+
+                ctrl.compare = function(date1, date2) {
+                    return new Date( date1.getFullYear(), date1.getMonth() ) - new Date( date2.getFullYear(), date2.getMonth() );
+                };
+
+                ctrl.handleKeyDown = function( key, evt ) {
+                    var date = ctrl.activeDate.getMonth();
+
+                    if (key === 'left') {
+                        date = date - 1;   // up
+                    } else if (key === 'up') {
+                        date = date - 3;   // down
+                    } else if (key === 'right') {
+                        date = date + 1;   // down
+                    } else if (key === 'down') {
+                        date = date + 3;
+                    } else if (key === 'pageup' || key === 'pagedown') {
+                        var year = ctrl.activeDate.getFullYear() + (key === 'pageup' ? - 1 : 1);
+                        ctrl.activeDate.setFullYear(year);
+                    } else if (key === 'home') {
+                        date = 0;
+                    } else if (key === 'end') {
+                        date = 11;
+                    }
+                    ctrl.activeDate.setMonth(date);
+                };
+
+                ctrl.refreshView();
+            }
+        };
+    }])
+
+    .directive('yearpicker', ['dateFilter', function (dateFilter) {
+        return {
+            restrict: 'EA',
+            replace: true,
+            templateUrl: 'template/datepicker/year.html',
+            require: '^datepicker',
+            link: function(scope, element, attrs, ctrl) {
+                var range = ctrl.yearRange;
+
+                ctrl.step = { years: range };
+                ctrl.element = element;
+
+                function getStartingYear( year ) {
+                    return parseInt((year - 1) / range, 10) * range + 1;
+                }
+
+                ctrl._refreshView = function() {
+                    var years = new Array(range);
+
+                    for ( var i = 0, start = getStartingYear(ctrl.activeDate.getFullYear()); i < range; i++ ) {
+                        years[i] = angular.extend(ctrl.createDateObject(new Date(start + i, 0, 1), ctrl.formatYear), {
+                            uid: scope.uniqueId + '-' + i
+                        });
+                    }
+
+                    scope.title = [years[0].label, years[range - 1].label].join(' - ');
+                    scope.rows = ctrl.split(years, 5);
+                };
+
+                ctrl.compare = function(date1, date2) {
+                    return date1.getFullYear() - date2.getFullYear();
+                };
+
+                ctrl.handleKeyDown = function( key, evt ) {
+                    var date = ctrl.activeDate.getFullYear();
+
+                    if (key === 'left') {
+                        date = date - 1;   // up
+                    } else if (key === 'up') {
+                        date = date - 5;   // down
+                    } else if (key === 'right') {
+                        date = date + 1;   // down
+                    } else if (key === 'down') {
+                        date = date + 5;
+                    } else if (key === 'pageup' || key === 'pagedown') {
+                        date += (key === 'pageup' ? - 1 : 1) * ctrl.step.years;
+                    } else if (key === 'home') {
+                        date = getStartingYear( ctrl.activeDate.getFullYear() );
+                    } else if (key === 'end') {
+                        date = getStartingYear( ctrl.activeDate.getFullYear() ) + range - 1;
+                    }
+                    ctrl.activeDate.setFullYear(date);
+                };
+
+                ctrl.refreshView();
+            }
+        };
+    }])
+
+    .constant('datepickerPopupConfig', {
+        datepickerPopup: 'yyyy-MM-dd',
+        html5Types: {
+            date: 'yyyy-MM-dd',
+            'datetime-local': 'yyyy-MM-ddTHH:mm:ss.sss',
+            'month': 'yyyy-MM'
+        },
+        currentText: 'Today',
+        clearText: 'Clear',
+        closeText: 'Done',
+        closeOnDateSelection: true,
+        appendToBody: false,
+        showButtonBar: true
+    })
+
+    .directive('datepickerPopup', ['$compile', '$parse', '$document', '$position', 'dateFilter', 'dateParser', 'datepickerPopupConfig',
+        function ($compile, $parse, $document, $position, dateFilter, dateParser, datepickerPopupConfig) {
+            return {
+                restrict: 'EA',
+                require: 'ngModel',
+                scope: {
+                    isOpen: '=?',
+                    currentText: '@',
+                    clearText: '@',
+                    closeText: '@',
+                    dateDisabled: '&',
+                    customClass: '&'
+                },
+                link: function(scope, element, attrs, ngModel) {
+                    var dateFormat,
+                        closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? scope.$parent.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection,
+                        appendToBody = angular.isDefined(attrs.datepickerAppendToBody) ? scope.$parent.$eval(attrs.datepickerAppendToBody) : datepickerPopupConfig.appendToBody;
+
+                    scope.showButtonBar = angular.isDefined(attrs.showButtonBar) ? scope.$parent.$eval(attrs.showButtonBar) : datepickerPopupConfig.showButtonBar;
+
+                    scope.getText = function( key ) {
+                        return scope[key + 'Text'] || datepickerPopupConfig[key + 'Text'];
+                    };
+
+                    var isHtml5DateInput = false;
+                    if (datepickerPopupConfig.html5Types[attrs.type]) {
+                        dateFormat = datepickerPopupConfig.html5Types[attrs.type];
+                        isHtml5DateInput = true;
+                    } else {
+                        dateFormat = attrs.datepickerPopup || datepickerPopupConfig.datepickerPopup;
+                        attrs.$observe('datepickerPopup', function(value, oldValue) {
+                            var newDateFormat = value || datepickerPopupConfig.datepickerPopup;
+                            // Invalidate the $modelValue to ensure that formatters re-run
+                            // FIXME: Refactor when PR is merged: https://github.com/angular/angular.js/pull/10764
+                            if (newDateFormat !== dateFormat) {
+                                dateFormat = newDateFormat;
+                                ngModel.$modelValue = null;
+
+                                if (!dateFormat) {
+                                    throw new Error('datepickerPopup must have a date format specified.');
+                                }
+                            }
+                        });
+                    }
+
+                    if (!dateFormat) {
+                        throw new Error('datepickerPopup must have a date format specified.');
+                    }
+
+                    if (isHtml5DateInput && attrs.datepickerPopup) {
+                        throw new Error('HTML5 date input types do not support custom formats.');
+                    }
+
+                    // popup element used to display calendar
+                    var popupEl = angular.element('<div datepicker-popup-wrap><div datepicker></div></div>');
+                    popupEl.attr({
+                        'ng-model': 'date',
+                        'ng-change': 'dateSelection()'
+                    });
+
+                    function cameltoDash( string ){
+                        return string.replace(/([A-Z])/g, function($1) { return '-' + $1.toLowerCase(); });
+                    }
+
+                    // datepicker element
+                    var datepickerEl = angular.element(popupEl.children()[0]);
+                    if (isHtml5DateInput) {
+                        if (attrs.type == 'month') {
+                            datepickerEl.attr('datepicker-mode', '"month"');
+                            datepickerEl.attr('min-mode', 'month');
+                        }
+                    }
+
+                    if ( attrs.datepickerOptions ) {
+                        var options = scope.$parent.$eval(attrs.datepickerOptions);
+                        if(options.initDate) {
+                            scope.initDate = options.initDate;
+                            datepickerEl.attr( 'init-date', 'initDate' );
+                            delete options.initDate;
+                        }
+                        angular.forEach(options, function( value, option ) {
+                            datepickerEl.attr( cameltoDash(option), value );
+                        });
+                    }
+
+                    scope.watchData = {};
+                    angular.forEach(['minDate', 'maxDate', 'datepickerMode', 'initDate', 'shortcutPropagation'], function( key ) {
+                        if ( attrs[key] ) {
+                            var getAttribute = $parse(attrs[key]);
+                            scope.$parent.$watch(getAttribute, function(value){
+                                scope.watchData[key] = value;
+                            });
+                            datepickerEl.attr(cameltoDash(key), 'watchData.' + key);
+
+                            // Propagate changes from datepicker to outside
+                            if ( key === 'datepickerMode' ) {
+                                var setAttribute = getAttribute.assign;
+                                scope.$watch('watchData.' + key, function(value, oldvalue) {
+                                    if ( value !== oldvalue ) {
+                                        setAttribute(scope.$parent, value);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                    if (attrs.dateDisabled) {
+                        datepickerEl.attr('date-disabled', 'dateDisabled({ date: date, mode: mode })');
+                    }
+
+                    if (attrs.showWeeks) {
+                        datepickerEl.attr('show-weeks', attrs.showWeeks);
+                    }
+
+                    if (attrs.customClass){
+                        datepickerEl.attr('custom-class', 'customClass({ date: date, mode: mode })');
+                    }
+
+                    function parseDate(viewValue) {
+                        if (angular.isNumber(viewValue)) {
+                            // presumably timestamp to date object
+                            viewValue = new Date(viewValue);
+                        }
+
+                        if (!viewValue) {
+                            return null;
+                        } else if (angular.isDate(viewValue) && !isNaN(viewValue)) {
+                            return viewValue;
+                        } else if (angular.isString(viewValue)) {
+                            var date = dateParser.parse(viewValue, dateFormat, scope.date) || new Date(viewValue);
+                            if (isNaN(date)) {
+                                return undefined;
+                            } else {
+                                return date;
+                            }
+                        } else {
+                            return undefined;
+                        }
+                    }
+
+                    function validator(modelValue, viewValue) {
+                        var value = modelValue || viewValue;
+                        if (angular.isNumber(value)) {
+                            value = new Date(value);
+                        }
+                        if (!value) {
+                            return true;
+                        } else if (angular.isDate(value) && !isNaN(value)) {
+                            return true;
+                        } else if (angular.isString(value)) {
+                            var date = dateParser.parse(value, dateFormat) || new Date(value);
+                            return !isNaN(date);
+                        } else {
+                            return false;
+                        }
+                    }
+
+                    if (!isHtml5DateInput) {
+                        // Internal API to maintain the correct ng-invalid-[key] class
+                        ngModel.$$parserName = 'date';
+                        ngModel.$validators.date = validator;
+                        ngModel.$parsers.unshift(parseDate);
+                        ngModel.$formatters.push(function (value) {
+                            scope.date = value;
+                            return ngModel.$isEmpty(value) ? value : dateFilter(value, dateFormat);
+                        });
+                    }
+                    else {
+                        ngModel.$formatters.push(function (value) {
+                            scope.date = value;
+                            return value;
+                        });
+                    }
+
+                    // Inner change
+                    scope.dateSelection = function(dt) {
+                        if (angular.isDefined(dt)) {
+                            scope.date = dt;
+                        }
+                        var date = scope.date ? dateFilter(scope.date, dateFormat) : '';
+                        element.val(date);
+                        ngModel.$setViewValue(date);
+
+                        if ( closeOnDateSelection ) {
+                            scope.isOpen = false;
+                            element[0].focus();
+                        }
+                    };
+
+                    // Detect changes in the view from the text box
+                    ngModel.$viewChangeListeners.push(function () {
+                        scope.date = dateParser.parse(ngModel.$viewValue, dateFormat, scope.date) || new Date(ngModel.$viewValue);
+                    });
+
+                    var documentClickBind = function(event) {
+                        if (scope.isOpen && event.target !== element[0]) {
+                            scope.$apply(function() {
+                                scope.isOpen = false;
+                            });
+                        }
+                    };
+
+                    var keydown = function(evt, noApply) {
+                        scope.keydown(evt);
+                    };
+                    element.bind('keydown', keydown);
+
+                    scope.keydown = function(evt) {
+                        if (evt.which === 27) {
+                            evt.preventDefault();
+                            if (scope.isOpen) {
+                                evt.stopPropagation();
+                            }
+                            scope.close();
+                        } else if (evt.which === 40 && !scope.isOpen) {
+                            scope.isOpen = true;
+                        }
+                    };
+
+                    scope.$watch('isOpen', function(value) {
+                        if (value) {
+                            scope.$broadcast('datepicker.focus');
+                            scope.position = appendToBody ? $position.offset(element) : $position.position(element);
+                            scope.position.top = scope.position.top + element.prop('offsetHeight');
+
+                            $document.bind('click', documentClickBind);
+                        } else {
+                            $document.unbind('click', documentClickBind);
+                        }
+                    });
+
+                    scope.select = function( date ) {
+                        if (date === 'today') {
+                            var today = new Date();
+                            if (angular.isDate(scope.date)) {
+                                date = new Date(scope.date);
+                                date.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
+                            } else {
+                                date = new Date(today.setHours(0, 0, 0, 0));
+                            }
+                        }
+                        scope.dateSelection( date );
+                    };
+
+                    scope.close = function() {
+                        scope.isOpen = false;
+                        element[0].focus();
+                    };
+
+                    var $popup = $compile(popupEl)(scope);
+                    // Prevent jQuery cache memory leak (template is now redundant after linking)
+                    popupEl.remove();
+
+                    if ( appendToBody ) {
+                        $document.find('body').append($popup);
+                    } else {
+                        element.after($popup);
+                    }
+
+                    scope.$on('$destroy', function() {
+                        $popup.remove();
+                        element.unbind('keydown', keydown);
+                        $document.unbind('click', documentClickBind);
+                    });
+                }
+            };
+        }])
+
+    .directive('datepickerPopupWrap', function() {
+        return {
+            restrict:'EA',
+            replace: true,
+            transclude: true,
+            templateUrl: 'template/datepicker/popup.html',
+            link:function (scope, element, attrs) {
+                element.bind('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+            }
+        };
+    });
+
+angular.module('ui.bootstrap.dropdown', ['ui.bootstrap.position'])
+
+    .constant('dropdownConfig', {
+        openClass: 'open'
+    })
+
+    .service('dropdownService', ['$document', '$rootScope', function($document, $rootScope) {
+        var openScope = null;
+
+        this.open = function( dropdownScope ) {
+            if ( !openScope ) {
+                $document.bind('click', closeDropdown);
+                $document.bind('keydown', escapeKeyBind);
+            }
+
+            if ( openScope && openScope !== dropdownScope ) {
+                openScope.isOpen = false;
+            }
+
+            openScope = dropdownScope;
+        };
+
+        this.close = function( dropdownScope ) {
+            if ( openScope === dropdownScope ) {
+                openScope = null;
+                $document.unbind('click', closeDropdown);
+                $document.unbind('keydown', escapeKeyBind);
+            }
+        };
+
+        var closeDropdown = function( evt ) {
+            // This method may still be called during the same mouse event that
+            // unbound this event handler. So check openScope before proceeding.
+            if (!openScope) { return; }
+
+            if( evt && openScope.getAutoClose() === 'disabled' )  { return ; }
+
+            var toggleElement = openScope.getToggleElement();
+            if ( evt && toggleElement && toggleElement[0].contains(evt.target) ) {
+                return;
+            }
+
+            var $element = openScope.getElement();
+            if( evt && openScope.getAutoClose() === 'outsideClick' && $element && $element[0].contains(evt.target) ) {
+                return;
+            }
+
+            openScope.isOpen = false;
+
+            if (!$rootScope.$$phase) {
+                openScope.$apply();
+            }
+        };
+
+        var escapeKeyBind = function( evt ) {
+            if ( evt.which === 27 ) {
+                openScope.focusToggleElement();
+                closeDropdown();
+            }
+        };
+    }])
+
+    .controller('DropdownController', ['$scope', '$attrs', '$parse', 'dropdownConfig', 'dropdownService', '$animate', '$position', '$document', function($scope, $attrs, $parse, dropdownConfig, dropdownService, $animate, $position, $document) {
+        var self = this,
+            scope = $scope.$new(), // create a child scope so we are not polluting original one
+            openClass = dropdownConfig.openClass,
+            getIsOpen,
+            setIsOpen = angular.noop,
+            toggleInvoker = $attrs.onToggle ? $parse($attrs.onToggle) : angular.noop,
+            appendToBody = false;
+
+        this.init = function( element ) {
+            self.$element = element;
+
+            if ( $attrs.isOpen ) {
+                getIsOpen = $parse($attrs.isOpen);
+                setIsOpen = getIsOpen.assign;
+
+                $scope.$watch(getIsOpen, function(value) {
+                    scope.isOpen = !!value;
+                });
+            }
+
+            appendToBody = angular.isDefined($attrs.dropdownAppendToBody);
+
+            if ( appendToBody && self.dropdownMenu ) {
+                $document.find('body').append( self.dropdownMenu );
+                element.on('$destroy', function handleDestroyEvent() {
+                    self.dropdownMenu.remove();
+                });
+            }
+        };
+
+        this.toggle = function( open ) {
+            return scope.isOpen = arguments.length ? !!open : !scope.isOpen;
+        };
+
+        // Allow other directives to watch status
+        this.isOpen = function() {
+            return scope.isOpen;
+        };
+
+        scope.getToggleElement = function() {
+            return self.toggleElement;
+        };
+
+        scope.getAutoClose = function() {
+            return $attrs.autoClose || 'always'; //or 'outsideClick' or 'disabled'
+        };
+
+        scope.getElement = function() {
+            return self.$element;
+        };
+
+        scope.focusToggleElement = function() {
+            if ( self.toggleElement ) {
+                self.toggleElement[0].focus();
+            }
+        };
+
+        scope.$watch('isOpen', function( isOpen, wasOpen ) {
+            if ( appendToBody && self.dropdownMenu ) {
+                var pos = $position.positionElements(self.$element, self.dropdownMenu, 'bottom-left', true);
+                self.dropdownMenu.css({
+                    top: pos.top + 'px',
+                    left: pos.left + 'px',
+                    display: isOpen ? 'block' : 'none'
+                });
+            }
+
+            $animate[isOpen ? 'addClass' : 'removeClass'](self.$element, openClass);
+
+            if ( isOpen ) {
+                scope.focusToggleElement();
+                dropdownService.open( scope );
+            } else {
+                dropdownService.close( scope );
+            }
+
+            setIsOpen($scope, isOpen);
+            if (angular.isDefined(isOpen) && isOpen !== wasOpen) {
+                toggleInvoker($scope, { open: !!isOpen });
+            }
+        });
+
+        $scope.$on('$locationChangeSuccess', function() {
+            scope.isOpen = false;
+        });
+
+        $scope.$on('$destroy', function() {
+            scope.$destroy();
+        });
+    }])
+
+    .directive('dropdown', function() {
+        return {
+            controller: 'DropdownController',
+            link: function(scope, element, attrs, dropdownCtrl) {
+                dropdownCtrl.init( element );
+            }
+        };
+    })
+
+    .directive('dropdownMenu', function() {
+        return {
+            restrict: 'AC',
+            require: '?^dropdown',
+            link: function(scope, element, attrs, dropdownCtrl) {
+                if ( !dropdownCtrl ) {
+                    return;
+                }
+                dropdownCtrl.dropdownMenu = element;
+            }
+        };
+    })
+
+    .directive('dropdownToggle', function() {
+        return {
+            require: '?^dropdown',
+            link: function(scope, element, attrs, dropdownCtrl) {
+                if ( !dropdownCtrl ) {
+                    return;
+                }
+
+                dropdownCtrl.toggleElement = element;
+
+                var toggleDropdown = function(event) {
+                    event.preventDefault();
+
+                    if ( !element.hasClass('disabled') && !attrs.disabled ) {
+                        scope.$apply(function() {
+                            dropdownCtrl.toggle();
+                        });
+                    }
+                };
+
+                element.bind('click', toggleDropdown);
+
+                // WAI-ARIA
+                element.attr({ 'aria-haspopup': true, 'aria-expanded': false });
+                scope.$watch(dropdownCtrl.isOpen, function( isOpen ) {
+                    element.attr('aria-expanded', !!isOpen);
+                });
+
+                scope.$on('$destroy', function() {
+                    element.unbind('click', toggleDropdown);
+                });
+            }
+        };
+    });
+
+angular.module('ui.bootstrap.modal', [])
+
+/**
+ * A helper, internal data structure that acts as a map but also allows getting / removing
+ * elements in the LIFO order
+ */
+    .factory('$$stackedMap', function () {
+        return {
+            createNew: function () {
+                var stack = [];
+
+                return {
+                    add: function (key, value) {
+                        stack.push({
+                            key: key,
+                            value: value
+                        });
+                    },
+                    get: function (key) {
+                        for (var i = 0; i < stack.length; i++) {
+                            if (key == stack[i].key) {
+                                return stack[i];
+                            }
+                        }
+                    },
+                    keys: function() {
+                        var keys = [];
+                        for (var i = 0; i < stack.length; i++) {
+                            keys.push(stack[i].key);
+                        }
+                        return keys;
+                    },
+                    top: function () {
+                        return stack[stack.length - 1];
+                    },
+                    remove: function (key) {
+                        var idx = -1;
+                        for (var i = 0; i < stack.length; i++) {
+                            if (key == stack[i].key) {
+                                idx = i;
+                                break;
+                            }
+                        }
+                        return stack.splice(idx, 1)[0];
+                    },
+                    removeTop: function () {
+                        return stack.splice(stack.length - 1, 1)[0];
+                    },
+                    length: function () {
+                        return stack.length;
+                    }
+                };
+            }
+        };
+    })
+
+/**
+ * A helper directive for the $modal service. It creates a backdrop element.
+ */
+    .directive('modalBackdrop', ['$timeout', function ($timeout) {
+        return {
+            restrict: 'EA',
+            replace: true,
+            templateUrl: 'template/modal/backdrop.html',
+            compile: function (tElement, tAttrs) {
+                tElement.addClass(tAttrs.backdropClass);
+                return linkFn;
+            }
+        };
+
+        function linkFn(scope, element, attrs) {
+            scope.animate = false;
+
+            //trigger CSS transitions
+            $timeout(function () {
+                scope.animate = true;
+            });
+        }
+    }])
+
+    .directive('modalWindow', ['$modalStack', '$q', function ($modalStack, $q) {
+        return {
+            restrict: 'EA',
+            scope: {
+                index: '@',
+                animate: '='
+            },
+            replace: true,
+            transclude: true,
+            templateUrl: function(tElement, tAttrs) {
+                return tAttrs.templateUrl || 'template/modal/window.html';
+            },
+            link: function (scope, element, attrs) {
+                element.addClass(attrs.windowClass || '');
+                scope.size = attrs.size;
+
+                scope.close = function (evt) {
+                    var modal = $modalStack.getTop();
+                    if (modal && modal.value.backdrop && modal.value.backdrop != 'static' && (evt.target === evt.currentTarget)) {
+                        evt.preventDefault();
+                        evt.stopPropagation();
+                        $modalStack.dismiss(modal.key, 'backdrop click');
+                    }
+                };
+
+                // This property is only added to the scope for the purpose of detecting when this directive is rendered.
+                // We can detect that by using this property in the template associated with this directive and then use
+                // {@link Attribute#$observe} on it. For more details please see {@link TableColumnResize}.
+                scope.$isRendered = true;
+
+                // Deferred object that will be resolved when this modal is render.
+                var modalRenderDeferObj = $q.defer();
+                // Observe function will be called on next digest cycle after compilation, ensuring that the DOM is ready.
+                // In order to use this way of finding whether DOM is ready, we need to observe a scope property used in modal's template.
+                attrs.$observe('modalRender', function (value) {
+                    if (value == 'true') {
+                        modalRenderDeferObj.resolve();
+                    }
+                });
+
+                modalRenderDeferObj.promise.then(function () {
+                    // trigger CSS transitions
+                    scope.animate = true;
+
+                    var inputsWithAutofocus = element[0].querySelectorAll('[autofocus]');
+                    /**
+                     * Auto-focusing of a freshly-opened modal element causes any child elements
+                     * with the autofocus attribute to lose focus. This is an issue on touch
+                     * based devices which will show and then hide the onscreen keyboard.
+                     * Attempts to refocus the autofocus element via JavaScript will not reopen
+                     * the onscreen keyboard. Fixed by updated the focusing logic to only autofocus
+                     * the modal element if the modal does not contain an autofocus element.
+                     */
+                    if (inputsWithAutofocus.length) {
+                        inputsWithAutofocus[0].focus();
+                    } else {
+                        element[0].focus();
+                    }
+
+                    // Notify {@link $modalStack} that modal is rendered.
+                    var modal = $modalStack.getTop();
+                    if (modal) {
+                        $modalStack.modalRendered(modal.key);
+                    }
+                });
+            }
+        };
+    }])
+
+    .directive('modalAnimationClass', [
+        function () {
+            return {
+                compile: function (tElement, tAttrs) {
+                    if (tAttrs.modalAnimation) {
+                        tElement.addClass(tAttrs.modalAnimationClass);
+                    }
+                }
+            };
+        }])
+
+    .directive('modalTransclude', function () {
+        return {
+            link: function($scope, $element, $attrs, controller, $transclude) {
+                $transclude($scope.$parent, function(clone) {
+                    $element.empty();
+                    $element.append(clone);
+                });
+            }
+        };
+    })
+
+    .factory('$modalStack', ['$animate', '$timeout', '$document', '$compile', '$rootScope', '$$stackedMap',
+        function ($animate, $timeout, $document, $compile, $rootScope, $$stackedMap) {
+
+            var OPENED_MODAL_CLASS = 'modal-open';
+
+            var backdropDomEl, backdropScope;
+            var openedWindows = $$stackedMap.createNew();
+            var $modalStack = {};
+
+            function backdropIndex() {
+                var topBackdropIndex = -1;
+                var opened = openedWindows.keys();
+                for (var i = 0; i < opened.length; i++) {
+                    if (openedWindows.get(opened[i]).value.backdrop) {
+                        topBackdropIndex = i;
+                    }
+                }
+                return topBackdropIndex;
+            }
+
+            $rootScope.$watch(backdropIndex, function(newBackdropIndex){
+                if (backdropScope) {
+                    backdropScope.index = newBackdropIndex;
+                }
+            });
+
+            function removeModalWindow(modalInstance) {
+
+                var body = $document.find('body').eq(0);
+                var modalWindow = openedWindows.get(modalInstance).value;
+
+                //clean up the stack
+                openedWindows.remove(modalInstance);
+
+                //remove window DOM element
+                removeAfterAnimate(modalWindow.modalDomEl, modalWindow.modalScope, function() {
+                    body.toggleClass(OPENED_MODAL_CLASS, openedWindows.length() > 0);
+                    checkRemoveBackdrop();
+                });
+            }
+
+            function checkRemoveBackdrop() {
+                //remove backdrop if no longer needed
+                if (backdropDomEl && backdropIndex() == -1) {
+                    var backdropScopeRef = backdropScope;
+                    removeAfterAnimate(backdropDomEl, backdropScope, function () {
+                        backdropScopeRef = null;
+                    });
+                    backdropDomEl = undefined;
+                    backdropScope = undefined;
+                }
+            }
+
+            function removeAfterAnimate(domEl, scope, done) {
+                // Closing animation
+                scope.animate = false;
+
+                if (domEl.attr('modal-animation') && $animate.enabled()) {
+                    // transition out
+                    domEl.one('$animate:close', function closeFn() {
+                        $rootScope.$evalAsync(afterAnimating);
+                    });
+                } else {
+                    // Ensure this call is async
+                    $timeout(afterAnimating);
+                }
+
+                function afterAnimating() {
+                    if (afterAnimating.done) {
+                        return;
+                    }
+                    afterAnimating.done = true;
+
+                    domEl.remove();
+                    scope.$destroy();
+                    if (done) {
+                        done();
+                    }
+                }
+            }
+
+            $document.bind('keydown', function (evt) {
+                var modal;
+
+                if (evt.which === 27) {
+                    modal = openedWindows.top();
+                    if (modal && modal.value.keyboard) {
+                        evt.preventDefault();
+                        $rootScope.$apply(function () {
+                            $modalStack.dismiss(modal.key, 'escape key press');
+                        });
+                    }
+                }
+            });
+
+            $modalStack.open = function (modalInstance, modal) {
+
+                var modalOpener = $document[0].activeElement;
+
+                openedWindows.add(modalInstance, {
+                    deferred: modal.deferred,
+                    renderDeferred: modal.renderDeferred,
+                    modalScope: modal.scope,
+                    backdrop: modal.backdrop,
+                    keyboard: modal.keyboard
+                });
+
+                var body = $document.find('body').eq(0),
+                    currBackdropIndex = backdropIndex();
+
+                if (currBackdropIndex >= 0 && !backdropDomEl) {
+                    backdropScope = $rootScope.$new(true);
+                    backdropScope.index = currBackdropIndex;
+                    var angularBackgroundDomEl = angular.element('<div modal-backdrop="modal-backdrop"></div>');
+                    angularBackgroundDomEl.attr('backdrop-class', modal.backdropClass);
+                    if (modal.animation) {
+                        angularBackgroundDomEl.attr('modal-animation', 'true');
+                    }
+                    backdropDomEl = $compile(angularBackgroundDomEl)(backdropScope);
+                    body.append(backdropDomEl);
+                }
+
+                var angularDomEl = angular.element('<div modal-window="modal-window"></div>');
+                angularDomEl.attr({
+                    'template-url': modal.windowTemplateUrl,
+                    'window-class': modal.windowClass,
+                    'size': modal.size,
+                    'index': openedWindows.length() - 1,
+                    'animate': 'animate'
+                }).html(modal.content);
+                if (modal.animation) {
+                    angularDomEl.attr('modal-animation', 'true');
+                }
+
+                var modalDomEl = $compile(angularDomEl)(modal.scope);
+                openedWindows.top().value.modalDomEl = modalDomEl;
+                openedWindows.top().value.modalOpener = modalOpener;
+                body.append(modalDomEl);
+                body.addClass(OPENED_MODAL_CLASS);
+            };
+
+            function broadcastClosing(modalWindow, resultOrReason, closing) {
+                return !modalWindow.value.modalScope.$broadcast('modal.closing', resultOrReason, closing).defaultPrevented;
+            }
+
+            $modalStack.close = function (modalInstance, result) {
+                var modalWindow = openedWindows.get(modalInstance);
+                if (modalWindow && broadcastClosing(modalWindow, result, true)) {
+                    modalWindow.value.deferred.resolve(result);
+                    removeModalWindow(modalInstance);
+                    modalWindow.value.modalOpener.focus();
+                    return true;
+                }
+                return !modalWindow;
+            };
+
+            $modalStack.dismiss = function (modalInstance, reason) {
+                var modalWindow = openedWindows.get(modalInstance);
+                if (modalWindow && broadcastClosing(modalWindow, reason, false)) {
+                    modalWindow.value.deferred.reject(reason);
+                    removeModalWindow(modalInstance);
+                    modalWindow.value.modalOpener.focus();
+                    return true;
+                }
+                return !modalWindow;
+            };
+
+            $modalStack.dismissAll = function (reason) {
+                var topModal = this.getTop();
+                while (topModal && this.dismiss(topModal.key, reason)) {
+                    topModal = this.getTop();
+                }
+            };
+
+            $modalStack.getTop = function () {
+                return openedWindows.top();
+            };
+
+            $modalStack.modalRendered = function (modalInstance) {
+                var modalWindow = openedWindows.get(modalInstance);
+                if (modalWindow) {
+                    modalWindow.value.renderDeferred.resolve();
+                }
+            };
+
+            return $modalStack;
+        }])
+
+    .provider('$modal', function () {
+
+        var $modalProvider = {
+            options: {
+                animation: true,
+                backdrop: true, //can also be false or 'static'
+                keyboard: true
+            },
+            $get: ['$injector', '$rootScope', '$q', '$templateRequest', '$controller', '$modalStack',
+                function ($injector, $rootScope, $q, $templateRequest, $controller, $modalStack) {
+
+                    var $modal = {};
+
+                    function getTemplatePromise(options) {
+                        return options.template ? $q.when(options.template) :
+                            $templateRequest(angular.isFunction(options.templateUrl) ? (options.templateUrl)() : options.templateUrl);
+                    }
+
+                    function getResolvePromises(resolves) {
+                        var promisesArr = [];
+                        angular.forEach(resolves, function (value) {
+                            if (angular.isFunction(value) || angular.isArray(value)) {
+                                promisesArr.push($q.when($injector.invoke(value)));
+                            }
+                        });
+                        return promisesArr;
+                    }
+
+                    $modal.open = function (modalOptions) {
+
+                        var modalResultDeferred = $q.defer();
+                        var modalOpenedDeferred = $q.defer();
+                        var modalRenderDeferred = $q.defer();
+
+                        //prepare an instance of a modal to be injected into controllers and returned to a caller
+                        var modalInstance = {
+                            result: modalResultDeferred.promise,
+                            opened: modalOpenedDeferred.promise,
+                            rendered: modalRenderDeferred.promise,
+                            close: function (result) {
+                                return $modalStack.close(modalInstance, result);
+                            },
+                            dismiss: function (reason) {
+                                return $modalStack.dismiss(modalInstance, reason);
+                            }
+                        };
+
+                        //merge and clean up options
+                        modalOptions = angular.extend({}, $modalProvider.options, modalOptions);
+                        modalOptions.resolve = modalOptions.resolve || {};
+
+                        //verify options
+                        if (!modalOptions.template && !modalOptions.templateUrl) {
+                            throw new Error('One of template or templateUrl options is required.');
+                        }
+
+                        var templateAndResolvePromise =
+                            $q.all([getTemplatePromise(modalOptions)].concat(getResolvePromises(modalOptions.resolve)));
+
+
+                        templateAndResolvePromise.then(function resolveSuccess(tplAndVars) {
+
+                            var modalScope = (modalOptions.scope || $rootScope).$new();
+                            modalScope.$close = modalInstance.close;
+                            modalScope.$dismiss = modalInstance.dismiss;
+
+                            var ctrlInstance, ctrlLocals = {};
+                            var resolveIter = 1;
+
+                            //controllers
+                            if (modalOptions.controller) {
+                                ctrlLocals.$scope = modalScope;
+                                ctrlLocals.$modalInstance = modalInstance;
+                                angular.forEach(modalOptions.resolve, function (value, key) {
+                                    ctrlLocals[key] = tplAndVars[resolveIter++];
+                                });
+
+                                ctrlInstance = $controller(modalOptions.controller, ctrlLocals);
+                                if (modalOptions.controllerAs) {
+                                    modalScope[modalOptions.controllerAs] = ctrlInstance;
+                                }
+                            }
+
+                            $modalStack.open(modalInstance, {
+                                scope: modalScope,
+                                deferred: modalResultDeferred,
+                                renderDeferred: modalRenderDeferred,
+                                content: tplAndVars[0],
+                                animation: modalOptions.animation,
+                                backdrop: modalOptions.backdrop,
+                                keyboard: modalOptions.keyboard,
+                                backdropClass: modalOptions.backdropClass,
+                                windowClass: modalOptions.windowClass,
+                                windowTemplateUrl: modalOptions.windowTemplateUrl,
+                                size: modalOptions.size
+                            });
+
+                        }, function resolveError(reason) {
+                            modalResultDeferred.reject(reason);
+                        });
+
+                        templateAndResolvePromise.then(function () {
+                            modalOpenedDeferred.resolve(true);
+                        }, function (reason) {
+                            modalOpenedDeferred.reject(reason);
+                        });
+
+                        return modalInstance;
+                    };
+
+                    return $modal;
+                }]
+        };
+
+        return $modalProvider;
+    });
+
+angular.module('ui.bootstrap.pagination', [])
+
+    .controller('PaginationController', ['$scope', '$attrs', '$parse', function ($scope, $attrs, $parse) {
+        var self = this,
+            ngModelCtrl = { $setViewValue: angular.noop }, // nullModelCtrl
+            setNumPages = $attrs.numPages ? $parse($attrs.numPages).assign : angular.noop;
+
+        this.init = function(ngModelCtrl_, config) {
+            ngModelCtrl = ngModelCtrl_;
+            this.config = config;
+
+            ngModelCtrl.$render = function() {
+                self.render();
+            };
+
+            if ($attrs.itemsPerPage) {
+                $scope.$parent.$watch($parse($attrs.itemsPerPage), function(value) {
+                    self.itemsPerPage = parseInt(value, 10);
+                    $scope.totalPages = self.calculateTotalPages();
+                });
+            } else {
+                this.itemsPerPage = config.itemsPerPage;
+            }
+
+            $scope.$watch('totalItems', function() {
+                $scope.totalPages = self.calculateTotalPages();
+            });
+
+            $scope.$watch('totalPages', function(value) {
+                setNumPages($scope.$parent, value); // Readonly variable
+
+                if ( $scope.page > value ) {
+                    $scope.selectPage(value);
+                } else {
+                    ngModelCtrl.$render();
+                }
+            });
+        };
+
+        this.calculateTotalPages = function() {
+            var totalPages = this.itemsPerPage < 1 ? 1 : Math.ceil($scope.totalItems / this.itemsPerPage);
+            return Math.max(totalPages || 0, 1);
+        };
+
+        this.render = function() {
+            $scope.page = parseInt(ngModelCtrl.$viewValue, 10) || 1;
+        };
+
+        $scope.selectPage = function(page, evt) {
+            if ( $scope.page !== page && page > 0 && page <= $scope.totalPages) {
+                if (evt && evt.target) {
+                    evt.target.blur();
+                }
+                ngModelCtrl.$setViewValue(page);
+                ngModelCtrl.$render();
+            }
+        };
+
+        $scope.getText = function( key ) {
+            return $scope[key + 'Text'] || self.config[key + 'Text'];
+        };
+        $scope.noPrevious = function() {
+            return $scope.page === 1;
+        };
+        $scope.noNext = function() {
+            return $scope.page === $scope.totalPages;
+        };
+    }])
+
+    .constant('paginationConfig', {
+        itemsPerPage: 10,
+        boundaryLinks: false,
+        directionLinks: true,
+        firstText: 'First',
+        previousText: 'Previous',
+        nextText: 'Next',
+        lastText: 'Last',
+        rotate: true
+    })
+
+    .directive('pagination', ['$parse', 'paginationConfig', function($parse, paginationConfig) {
+        return {
+            restrict: 'EA',
+            scope: {
+                totalItems: '=',
+                firstText: '@',
+                previousText: '@',
+                nextText: '@',
+                lastText: '@'
+            },
+            require: ['pagination', '?ngModel'],
+            controller: 'PaginationController',
+            templateUrl: 'template/pagination/pagination.html',
+            replace: true,
+            link: function(scope, element, attrs, ctrls) {
+                var paginationCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+                if (!ngModelCtrl) {
+                    return; // do nothing if no ng-model
+                }
+
+                // Setup configuration parameters
+                var maxSize = angular.isDefined(attrs.maxSize) ? scope.$parent.$eval(attrs.maxSize) : paginationConfig.maxSize,
+                    rotate = angular.isDefined(attrs.rotate) ? scope.$parent.$eval(attrs.rotate) : paginationConfig.rotate;
+                scope.boundaryLinks = angular.isDefined(attrs.boundaryLinks) ? scope.$parent.$eval(attrs.boundaryLinks) : paginationConfig.boundaryLinks;
+                scope.directionLinks = angular.isDefined(attrs.directionLinks) ? scope.$parent.$eval(attrs.directionLinks) : paginationConfig.directionLinks;
+
+                paginationCtrl.init(ngModelCtrl, paginationConfig);
+
+                if (attrs.maxSize) {
+                    scope.$parent.$watch($parse(attrs.maxSize), function(value) {
+                        maxSize = parseInt(value, 10);
+                        paginationCtrl.render();
+                    });
+                }
+
+                // Create page object used in template
+                function makePage(number, text, isActive) {
+                    return {
+                        number: number,
+                        text: text,
+                        active: isActive
+                    };
+                }
+
+                function getPages(currentPage, totalPages) {
+                    var pages = [];
+
+                    // Default page limits
+                    var startPage = 1, endPage = totalPages;
+                    var isMaxSized = ( angular.isDefined(maxSize) && maxSize < totalPages );
+
+                    // recompute if maxSize
+                    if ( isMaxSized ) {
+                        if ( rotate ) {
+                            // Current page is displayed in the middle of the visible ones
+                            startPage = Math.max(currentPage - Math.floor(maxSize/2), 1);
+                            endPage   = startPage + maxSize - 1;
+
+                            // Adjust if limit is exceeded
+                            if (endPage > totalPages) {
+                                endPage   = totalPages;
+                                startPage = endPage - maxSize + 1;
+                            }
+                        } else {
+                            // Visible pages are paginated with maxSize
+                            startPage = ((Math.ceil(currentPage / maxSize) - 1) * maxSize) + 1;
+
+                            // Adjust last page if limit is exceeded
+                            endPage = Math.min(startPage + maxSize - 1, totalPages);
+                        }
+                    }
+
+                    // Add page number links
+                    for (var number = startPage; number <= endPage; number++) {
+                        var page = makePage(number, number, number === currentPage);
+                        pages.push(page);
+                    }
+
+                    // Add links to move between page sets
+                    if ( isMaxSized && ! rotate ) {
+                        if ( startPage > 1 ) {
+                            var previousPageSet = makePage(startPage - 1, '...', false);
+                            pages.unshift(previousPageSet);
+                        }
+
+                        if ( endPage < totalPages ) {
+                            var nextPageSet = makePage(endPage + 1, '...', false);
+                            pages.push(nextPageSet);
+                        }
+                    }
+
+                    return pages;
+                }
+
+                var originalRender = paginationCtrl.render;
+                paginationCtrl.render = function() {
+                    originalRender();
+                    if (scope.page > 0 && scope.page <= scope.totalPages) {
+                        scope.pages = getPages(scope.page, scope.totalPages);
+                    }
+                };
+            }
+        };
+    }])
+
+    .constant('pagerConfig', {
+        itemsPerPage: 10,
+        previousText: '« Previous',
+        nextText: 'Next »',
+        align: true
+    })
+
+    .directive('pager', ['pagerConfig', function(pagerConfig) {
+        return {
+            restrict: 'EA',
+            scope: {
+                totalItems: '=',
+                previousText: '@',
+                nextText: '@'
+            },
+            require: ['pager', '?ngModel'],
+            controller: 'PaginationController',
+            templateUrl: 'template/pagination/pager.html',
+            replace: true,
+            link: function(scope, element, attrs, ctrls) {
+                var paginationCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+                if (!ngModelCtrl) {
+                    return; // do nothing if no ng-model
+                }
+
+                scope.align = angular.isDefined(attrs.align) ? scope.$parent.$eval(attrs.align) : pagerConfig.align;
+                paginationCtrl.init(ngModelCtrl, pagerConfig);
+            }
+        };
+    }]);
+
+/**
+ * The following features are still outstanding: animation as a
+ * function, placement as a function, inside, support for more triggers than
+ * just mouse enter/leave, html tooltips, and selector delegation.
+ */
+angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.bindHtml' ] )
+
+/**
+ * The $tooltip service creates tooltip- and popover-like directives as well as
+ * houses global options for them.
+ */
+    .provider( '$tooltip', function () {
+        // The default options tooltip and popover.
+        var defaultOptions = {
+            placement: 'top',
+            animation: true,
+            popupDelay: 0,
+            useContentExp: false
+        };
+
+        // Default hide triggers for each show trigger
+        var triggerMap = {
+            'mouseenter': 'mouseleave',
+            'click': 'click',
+            'focus': 'blur'
+        };
+
+        // The options specified to the provider globally.
+        var globalOptions = {};
+
+        /**
+         * `options({})` allows global configuration of all tooltips in the
+         * application.
+         *
+         *   var app = angular.module( 'App', ['ui.bootstrap.tooltip'], function( $tooltipProvider ) {
+   *     // place tooltips left instead of top by default
+   *     $tooltipProvider.options( { placement: 'left' } );
+   *   });
+         */
+        this.options = function( value ) {
+            angular.extend( globalOptions, value );
+        };
+
+        /**
+         * This allows you to extend the set of trigger mappings available. E.g.:
+         *
+         *   $tooltipProvider.setTriggers( 'openTrigger': 'closeTrigger' );
+         */
+        this.setTriggers = function setTriggers ( triggers ) {
+            angular.extend( triggerMap, triggers );
+        };
+
+        /**
+         * This is a helper function for translating camel-case to snake-case.
+         */
+        function snake_case(name){
+            var regexp = /[A-Z]/g;
+            var separator = '-';
+            return name.replace(regexp, function(letter, pos) {
+                return (pos ? separator : '') + letter.toLowerCase();
+            });
+        }
+
+        /**
+         * Returns the actual instance of the $tooltip service.
+         * TODO support multiple triggers
+         */
+        this.$get = [ '$window', '$compile', '$timeout', '$document', '$position', '$interpolate', function ( $window, $compile, $timeout, $document, $position, $interpolate ) {
+            return function $tooltip ( type, prefix, defaultTriggerShow, options ) {
+                options = angular.extend( {}, defaultOptions, globalOptions, options );
+
+                /**
+                 * Returns an object of show and hide triggers.
+                 *
+                 * If a trigger is supplied,
+                 * it is used to show the tooltip; otherwise, it will use the `trigger`
+                 * option passed to the `$tooltipProvider.options` method; else it will
+                 * default to the trigger supplied to this directive factory.
+                 *
+                 * The hide trigger is based on the show trigger. If the `trigger` option
+                 * was passed to the `$tooltipProvider.options` method, it will use the
+                 * mapped trigger from `triggerMap` or the passed trigger if the map is
+                 * undefined; otherwise, it uses the `triggerMap` value of the show
+                 * trigger; else it will just use the show trigger.
+                 */
+                function getTriggers ( trigger ) {
+                    var show = trigger || options.trigger || defaultTriggerShow;
+                    var hide = triggerMap[show] || show;
+                    return {
+                        show: show,
+                        hide: hide
+                    };
+                }
+
+                var directiveName = snake_case( type );
+
+                var startSym = $interpolate.startSymbol();
+                var endSym = $interpolate.endSymbol();
+                var template =
+                    '<div '+ directiveName +'-popup '+
+                    'title="'+startSym+'title'+endSym+'" '+
+                    (options.useContentExp ?
+                        'content-exp="contentExp()" ' :
+                    'content="'+startSym+'content'+endSym+'" ') +
+                    'placement="'+startSym+'placement'+endSym+'" '+
+                    'popup-class="'+startSym+'popupClass'+endSym+'" '+
+                    'animation="animation" '+
+                    'is-open="isOpen"'+
+                    'origin-scope="origScope" '+
+                    '>'+
+                    '</div>';
+
+                return {
+                    restrict: 'EA',
+                    compile: function (tElem, tAttrs) {
+                        var tooltipLinker = $compile( template );
+
+                        return function link ( scope, element, attrs, tooltipCtrl ) {
+                            var tooltip;
+                            var tooltipLinkedScope;
+                            var transitionTimeout;
+                            var popupTimeout;
+                            var appendToBody = angular.isDefined( options.appendToBody ) ? options.appendToBody : false;
+                            var triggers = getTriggers( undefined );
+                            var hasEnableExp = angular.isDefined(attrs[prefix+'Enable']);
+                            var ttScope = scope.$new(true);
+
+                            var positionTooltip = function () {
+                                if (!tooltip) { return; }
+
+                                var ttPosition = $position.positionElements(element, tooltip, ttScope.placement, appendToBody);
+                                ttPosition.top += 'px';
+                                ttPosition.left += 'px';
+
+                                // Now set the calculated positioning.
+                                tooltip.css( ttPosition );
+                            };
+
+                            // Set up the correct scope to allow transclusion later
+                            ttScope.origScope = scope;
+
+                            // By default, the tooltip is not open.
+                            // TODO add ability to start tooltip opened
+                            ttScope.isOpen = false;
+
+                            function toggleTooltipBind () {
+                                if ( ! ttScope.isOpen ) {
+                                    showTooltipBind();
+                                } else {
+                                    hideTooltipBind();
+                                }
+                            }
+
+                            // Show the tooltip with delay if specified, otherwise show it immediately
+                            function showTooltipBind() {
+                                if(hasEnableExp && !scope.$eval(attrs[prefix+'Enable'])) {
+                                    return;
+                                }
+
+                                prepareTooltip();
+
+                                if ( ttScope.popupDelay ) {
+                                    // Do nothing if the tooltip was already scheduled to pop-up.
+                                    // This happens if show is triggered multiple times before any hide is triggered.
+                                    if (!popupTimeout) {
+                                        popupTimeout = $timeout( show, ttScope.popupDelay, false );
+                                        popupTimeout.then(function(reposition){reposition();});
+                                    }
+                                } else {
+                                    show()();
+                                }
+                            }
+
+                            function hideTooltipBind () {
+                                scope.$apply(function () {
+                                    hide();
+                                });
+                            }
+
+                            // Show the tooltip popup element.
+                            function show() {
+
+                                popupTimeout = null;
+
+                                // If there is a pending remove transition, we must cancel it, lest the
+                                // tooltip be mysteriously removed.
+                                if ( transitionTimeout ) {
+                                    $timeout.cancel( transitionTimeout );
+                                    transitionTimeout = null;
+                                }
+
+                                // Don't show empty tooltips.
+                                if ( !(options.useContentExp ? ttScope.contentExp() : ttScope.content) ) {
+                                    return angular.noop;
+                                }
+
+                                createTooltip();
+
+                                // Set the initial positioning.
+                                tooltip.css({ top: 0, left: 0, display: 'block' });
+                                ttScope.$digest();
+
+                                positionTooltip();
+
+                                // And show the tooltip.
+                                ttScope.isOpen = true;
+                                ttScope.$apply(); // digest required as $apply is not called
+
+                                // Return positioning function as promise callback for correct
+                                // positioning after draw.
+                                return positionTooltip;
+                            }
+
+                            // Hide the tooltip popup element.
+                            function hide() {
+                                // First things first: we don't show it anymore.
+                                ttScope.isOpen = false;
+
+                                //if tooltip is going to be shown after delay, we must cancel this
+                                $timeout.cancel( popupTimeout );
+                                popupTimeout = null;
+
+                                // And now we remove it from the DOM. However, if we have animation, we
+                                // need to wait for it to expire beforehand.
+                                // FIXME: this is a placeholder for a port of the transitions library.
+                                if ( ttScope.animation ) {
+                                    if (!transitionTimeout) {
+                                        transitionTimeout = $timeout(removeTooltip, 500);
+                                    }
+                                } else {
+                                    removeTooltip();
+                                }
+                            }
+
+                            function createTooltip() {
+                                // There can only be one tooltip element per directive shown at once.
+                                if (tooltip) {
+                                    removeTooltip();
+                                }
+                                tooltipLinkedScope = ttScope.$new();
+                                tooltip = tooltipLinker(tooltipLinkedScope, function (tooltip) {
+                                    if ( appendToBody ) {
+                                        $document.find( 'body' ).append( tooltip );
+                                    } else {
+                                        element.after( tooltip );
+                                    }
+                                });
+
+                                tooltipLinkedScope.$watch(function () {
+                                    $timeout(positionTooltip, 0, false);
+                                });
+
+                                if (options.useContentExp) {
+                                    tooltipLinkedScope.$watch('contentExp()', function (val) {
+                                        if (!val && ttScope.isOpen ) {
+                                            hide();
+                                        }
+                                    });
+                                }
+                            }
+
+                            function removeTooltip() {
+                                transitionTimeout = null;
+                                if (tooltip) {
+                                    tooltip.remove();
+                                    tooltip = null;
+                                }
+                                if (tooltipLinkedScope) {
+                                    tooltipLinkedScope.$destroy();
+                                    tooltipLinkedScope = null;
+                                }
+                            }
+
+                            function prepareTooltip() {
+                                prepPopupClass();
+                                prepPlacement();
+                                prepPopupDelay();
+                            }
+
+                            ttScope.contentExp = function () {
+                                return scope.$eval(attrs[type]);
+                            };
+
+                            /**
+                             * Observe the relevant attributes.
+                             */
+                            if (!options.useContentExp) {
+                                attrs.$observe( type, function ( val ) {
+                                    ttScope.content = val;
+
+                                    if (!val && ttScope.isOpen ) {
+                                        hide();
+                                    }
+                                });
+                            }
+
+                            attrs.$observe( 'disabled', function ( val ) {
+                                if (val && ttScope.isOpen ) {
+                                    hide();
+                                }
+                            });
+
+                            attrs.$observe( prefix+'Title', function ( val ) {
+                                ttScope.title = val;
+                            });
+
+                            function prepPopupClass() {
+                                ttScope.popupClass = attrs[prefix + 'Class'];
+                            }
+
+                            function prepPlacement() {
+                                var val = attrs[ prefix + 'Placement' ];
+                                ttScope.placement = angular.isDefined( val ) ? val : options.placement;
+                            }
+
+                            function prepPopupDelay() {
+                                var val = attrs[ prefix + 'PopupDelay' ];
+                                var delay = parseInt( val, 10 );
+                                ttScope.popupDelay = ! isNaN(delay) ? delay : options.popupDelay;
+                            }
+
+                            var unregisterTriggers = function () {
+                                element.unbind(triggers.show, showTooltipBind);
+                                element.unbind(triggers.hide, hideTooltipBind);
+                            };
+
+                            function prepTriggers() {
+                                var val = attrs[ prefix + 'Trigger' ];
+                                unregisterTriggers();
+
+                                triggers = getTriggers( val );
+
+                                if ( triggers.show === triggers.hide ) {
+                                    element.bind( triggers.show, toggleTooltipBind );
+                                } else {
+                                    element.bind( triggers.show, showTooltipBind );
+                                    element.bind( triggers.hide, hideTooltipBind );
+                                }
+                            }
+                            prepTriggers();
+
+                            var animation = scope.$eval(attrs[prefix + 'Animation']);
+                            ttScope.animation = angular.isDefined(animation) ? !!animation : options.animation;
+
+                            var appendToBodyVal = scope.$eval(attrs[prefix + 'AppendToBody']);
+                            appendToBody = angular.isDefined(appendToBodyVal) ? appendToBodyVal : appendToBody;
+
+                            // if a tooltip is attached to <body> we need to remove it on
+                            // location change as its parent scope will probably not be destroyed
+                            // by the change.
+                            if ( appendToBody ) {
+                                scope.$on('$locationChangeSuccess', function closeTooltipOnLocationChangeSuccess () {
+                                    if ( ttScope.isOpen ) {
+                                        hide();
+                                    }
+                                });
+                            }
+
+                            // Make sure tooltip is destroyed and removed.
+                            scope.$on('$destroy', function onDestroyTooltip() {
+                                $timeout.cancel( transitionTimeout );
+                                $timeout.cancel( popupTimeout );
+                                unregisterTriggers();
+                                removeTooltip();
+                                ttScope = null;
+                            });
+                        };
+                    }
+                };
+            };
+        }];
+    })
+
+// This is mostly ngInclude code but with a custom scope
+    .directive( 'tooltipTemplateTransclude', [
+        '$animate', '$sce', '$compile', '$templateRequest',
+        function ($animate ,  $sce ,  $compile ,  $templateRequest) {
+            return {
+                link: function ( scope, elem, attrs ) {
+                    var origScope = scope.$eval(attrs.tooltipTemplateTranscludeScope);
+
+                    var changeCounter = 0,
+                        currentScope,
+                        previousElement,
+                        currentElement;
+
+                    var cleanupLastIncludeContent = function() {
+                        if (previousElement) {
+                            previousElement.remove();
+                            previousElement = null;
+                        }
+                        if (currentScope) {
+                            currentScope.$destroy();
+                            currentScope = null;
+                        }
+                        if (currentElement) {
+                            $animate.leave(currentElement).then(function() {
+                                previousElement = null;
+                            });
+                            previousElement = currentElement;
+                            currentElement = null;
+                        }
+                    };
+
+                    scope.$watch($sce.parseAsResourceUrl(attrs.tooltipTemplateTransclude), function (src) {
+                        var thisChangeId = ++changeCounter;
+
+                        if (src) {
+                            //set the 2nd param to true to ignore the template request error so that the inner
+                            //contents and scope can be cleaned up.
+                            $templateRequest(src, true).then(function(response) {
+                                if (thisChangeId !== changeCounter) { return; }
+                                var newScope = origScope.$new();
+                                var template = response;
+
+                                var clone = $compile(template)(newScope, function(clone) {
+                                    cleanupLastIncludeContent();
+                                    $animate.enter(clone, elem);
+                                });
+
+                                currentScope = newScope;
+                                currentElement = clone;
+
+                                currentScope.$emit('$includeContentLoaded', src);
+                            }, function() {
+                                if (thisChangeId === changeCounter) {
+                                    cleanupLastIncludeContent();
+                                    scope.$emit('$includeContentError', src);
+                                }
+                            });
+                            scope.$emit('$includeContentRequested', src);
+                        } else {
+                            cleanupLastIncludeContent();
+                        }
+                    });
+
+                    scope.$on('$destroy', cleanupLastIncludeContent);
+                }
+            };
+        }])
+
+/**
+ * Note that it's intentional that these classes are *not* applied through $animate.
+ * They must not be animated as they're expected to be present on the tooltip on
+ * initialization.
+ */
+    .directive('tooltipClasses', function () {
+        return {
+            restrict: 'A',
+            link: function (scope, element, attrs) {
+                if (scope.placement) {
+                    element.addClass(scope.placement);
+                }
+                if (scope.popupClass) {
+                    element.addClass(scope.popupClass);
+                }
+                if (scope.animation()) {
+                    element.addClass(attrs.tooltipAnimationClass);
+                }
+            }
+        };
+    })
+
+    .directive( 'tooltipPopup', function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: { content: '@', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+            templateUrl: 'template/tooltip/tooltip-popup.html'
+        };
+    })
+
+    .directive( 'tooltip', [ '$tooltip', function ( $tooltip ) {
+        return $tooltip( 'tooltip', 'tooltip', 'mouseenter' );
+    }])
+
+    .directive( 'tooltipTemplatePopup', function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: { contentExp: '&', placement: '@', popupClass: '@', animation: '&', isOpen: '&',
+                originScope: '&' },
+            templateUrl: 'template/tooltip/tooltip-template-popup.html'
+        };
+    })
+
+    .directive( 'tooltipTemplate', [ '$tooltip', function ( $tooltip ) {
+        return $tooltip('tooltipTemplate', 'tooltip', 'mouseenter', {
+            useContentExp: true
+        });
+    }])
+
+    .directive( 'tooltipHtmlPopup', function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: { contentExp: '&', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+            templateUrl: 'template/tooltip/tooltip-html-popup.html'
+        };
+    })
+
+    .directive( 'tooltipHtml', [ '$tooltip', function ( $tooltip ) {
+        return $tooltip('tooltipHtml', 'tooltip', 'mouseenter', {
+            useContentExp: true
+        });
+    }])
+
+    /*
+     Deprecated
+     */
+    .directive( 'tooltipHtmlUnsafePopup', function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: { content: '@', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+            templateUrl: 'template/tooltip/tooltip-html-unsafe-popup.html'
+        };
+    })
+
+    .value('tooltipHtmlUnsafeSuppressDeprecated', false)
+    .directive( 'tooltipHtmlUnsafe', [
+        '$tooltip', 'tooltipHtmlUnsafeSuppressDeprecated', '$log',
+        function ( $tooltip ,  tooltipHtmlUnsafeSuppressDeprecated ,  $log) {
+            if (!tooltipHtmlUnsafeSuppressDeprecated) {
+                $log.warn('tooltip-html-unsafe is now deprecated. Use tooltip-html or tooltip-template instead.');
+            }
+            return $tooltip( 'tooltipHtmlUnsafe', 'tooltip', 'mouseenter' );
+        }]);
+
+/**
+ * The following features are still outstanding: popup delay, animation as a
+ * function, placement as a function, inside, support for more triggers than
+ * just mouse enter/leave, html popovers, and selector delegatation.
+ */
+angular.module( 'ui.bootstrap.popover', [ 'ui.bootstrap.tooltip' ] )
+
+    .directive( 'popoverTemplatePopup', function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: { title: '@', contentExp: '&', placement: '@', popupClass: '@', animation: '&', isOpen: '&',
+                originScope: '&' },
+            templateUrl: 'template/popover/popover-template.html'
+        };
+    })
+
+    .directive( 'popoverTemplate', [ '$tooltip', function ( $tooltip ) {
+        return $tooltip( 'popoverTemplate', 'popover', 'click', {
+            useContentExp: true
+        } );
+    }])
+
+    .directive( 'popoverPopup', function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: { title: '@', content: '@', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+            templateUrl: 'template/popover/popover.html'
+        };
+    })
+
+    .directive( 'popover', [ '$tooltip', function ( $tooltip ) {
+        return $tooltip( 'popover', 'popover', 'click' );
+    }]);
+
+angular.module('ui.bootstrap.progressbar', [])
+
+    .constant('progressConfig', {
+        animate: true,
+        max: 100
+    })
+
+    .controller('ProgressController', ['$scope', '$attrs', 'progressConfig', function($scope, $attrs, progressConfig) {
+        var self = this,
+            animate = angular.isDefined($attrs.animate) ? $scope.$parent.$eval($attrs.animate) : progressConfig.animate;
+
+        this.bars = [];
+        $scope.max = angular.isDefined($scope.max) ? $scope.max : progressConfig.max;
+
+        this.addBar = function(bar, element) {
+            if ( !animate ) {
+                element.css({'transition': 'none'});
+            }
+
+            this.bars.push(bar);
+
+            bar.$watch('value', function( value ) {
+                bar.percent = +(100 * value / $scope.max).toFixed(2);
+            });
+
+            bar.$on('$destroy', function() {
+                element = null;
+                self.removeBar(bar);
+            });
+        };
+
+        this.removeBar = function(bar) {
+            this.bars.splice(this.bars.indexOf(bar), 1);
+        };
+    }])
+
+    .directive('progress', function() {
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            controller: 'ProgressController',
+            require: 'progress',
+            scope: {},
+            templateUrl: 'template/progressbar/progress.html'
+        };
+    })
+
+    .directive('bar', function() {
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            require: '^progress',
+            scope: {
+                value: '=',
+                max: '=?',
+                type: '@'
+            },
+            templateUrl: 'template/progressbar/bar.html',
+            link: function(scope, element, attrs, progressCtrl) {
+                progressCtrl.addBar(scope, element);
+            }
+        };
+    })
+
+    .directive('progressbar', function() {
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            controller: 'ProgressController',
+            scope: {
+                value: '=',
+                max: '=?',
+                type: '@'
+            },
+            templateUrl: 'template/progressbar/progressbar.html',
+            link: function(scope, element, attrs, progressCtrl) {
+                progressCtrl.addBar(scope, angular.element(element.children()[0]));
+            }
+        };
+    });
+
+angular.module('ui.bootstrap.rating', [])
+
+    .constant('ratingConfig', {
+        max: 5,
+        stateOn: null,
+        stateOff: null
+    })
+
+    .controller('RatingController', ['$scope', '$attrs', 'ratingConfig', function($scope, $attrs, ratingConfig) {
+        var ngModelCtrl  = { $setViewValue: angular.noop };
+
+        this.init = function(ngModelCtrl_) {
+            ngModelCtrl = ngModelCtrl_;
+            ngModelCtrl.$render = this.render;
+
+            ngModelCtrl.$formatters.push(function(value) {
+                if (angular.isNumber(value) && value << 0 !== value) {
+                    value = Math.round(value);
+                }
+                return value;
+            });
+
+            this.stateOn = angular.isDefined($attrs.stateOn) ? $scope.$parent.$eval($attrs.stateOn) : ratingConfig.stateOn;
+            this.stateOff = angular.isDefined($attrs.stateOff) ? $scope.$parent.$eval($attrs.stateOff) : ratingConfig.stateOff;
+
+            var ratingStates = angular.isDefined($attrs.ratingStates) ? $scope.$parent.$eval($attrs.ratingStates) :
+                new Array( angular.isDefined($attrs.max) ? $scope.$parent.$eval($attrs.max) : ratingConfig.max );
+            $scope.range = this.buildTemplateObjects(ratingStates);
+        };
+
+        this.buildTemplateObjects = function(states) {
+            for (var i = 0, n = states.length; i < n; i++) {
+                states[i] = angular.extend({ index: i }, { stateOn: this.stateOn, stateOff: this.stateOff }, states[i]);
+            }
+            return states;
+        };
+
+        $scope.rate = function(value) {
+            if ( !$scope.readonly && value >= 0 && value <= $scope.range.length ) {
+                ngModelCtrl.$setViewValue(value);
+                ngModelCtrl.$render();
+            }
+        };
+
+        $scope.enter = function(value) {
+            if ( !$scope.readonly ) {
+                $scope.value = value;
+            }
+            $scope.onHover({value: value});
+        };
+
+        $scope.reset = function() {
+            $scope.value = ngModelCtrl.$viewValue;
+            $scope.onLeave();
+        };
+
+        $scope.onKeydown = function(evt) {
+            if (/(37|38|39|40)/.test(evt.which)) {
+                evt.preventDefault();
+                evt.stopPropagation();
+                $scope.rate( $scope.value + (evt.which === 38 || evt.which === 39 ? 1 : -1) );
+            }
+        };
+
+        this.render = function() {
+            $scope.value = ngModelCtrl.$viewValue;
+        };
+    }])
+
+    .directive('rating', function() {
+        return {
+            restrict: 'EA',
+            require: ['rating', 'ngModel'],
+            scope: {
+                readonly: '=?',
+                onHover: '&',
+                onLeave: '&'
+            },
+            controller: 'RatingController',
+            templateUrl: 'template/rating/rating.html',
+            replace: true,
+            link: function(scope, element, attrs, ctrls) {
+                var ratingCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+                ratingCtrl.init( ngModelCtrl );
+            }
+        };
+    });
+
+/**
+ * @ngdoc overview
+ * @name ui.bootstrap.tabs
+ *
+ * @description
+ * AngularJS version of the tabs directive.
+ */
+
+angular.module('ui.bootstrap.tabs', [])
+
+    .controller('TabsetController', ['$scope', function TabsetCtrl($scope) {
+        var ctrl = this,
+            tabs = ctrl.tabs = $scope.tabs = [];
+
+        ctrl.select = function(selectedTab) {
+            angular.forEach(tabs, function(tab) {
+                if (tab.active && tab !== selectedTab) {
+                    tab.active = false;
+                    tab.onDeselect();
+                }
+            });
+            selectedTab.active = true;
+            selectedTab.onSelect();
+        };
+
+        ctrl.addTab = function addTab(tab) {
+            tabs.push(tab);
+            // we can't run the select function on the first tab
+            // since that would select it twice
+            if (tabs.length === 1 && tab.active !== false) {
+                tab.active = true;
+            } else if (tab.active) {
+                ctrl.select(tab);
+            }
+            else {
+                tab.active = false;
+            }
+        };
+
+        ctrl.removeTab = function removeTab(tab) {
+            var index = tabs.indexOf(tab);
+            //Select a new tab if the tab to be removed is selected and not destroyed
+            if (tab.active && tabs.length > 1 && !destroyed) {
+                //If this is the last tab, select the previous tab. else, the next tab.
+                var newActiveIndex = index == tabs.length - 1 ? index - 1 : index + 1;
+                ctrl.select(tabs[newActiveIndex]);
+            }
+            tabs.splice(index, 1);
+        };
+
+        var destroyed;
+        $scope.$on('$destroy', function() {
+            destroyed = true;
+        });
+    }])
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.tabs.directive:tabset
+ * @restrict EA
+ *
+ * @description
+ * Tabset is the outer container for the tabs directive
+ *
+ * @param {boolean=} vertical Whether or not to use vertical styling for the tabs.
+ * @param {boolean=} justified Whether or not to use justified styling for the tabs.
+ *
+ * @example
+ <example module="ui.bootstrap">
+ <file name="index.html">
+ <tabset>
+ <tab heading="Tab 1"><b>First</b> Content!</tab>
+ <tab heading="Tab 2"><i>Second</i> Content!</tab>
+ </tabset>
+ <hr />
+ <tabset vertical="true">
+ <tab heading="Vertical Tab 1"><b>First</b> Vertical Content!</tab>
+ <tab heading="Vertical Tab 2"><i>Second</i> Vertical Content!</tab>
+ </tabset>
+ <tabset justified="true">
+ <tab heading="Justified Tab 1"><b>First</b> Justified Content!</tab>
+ <tab heading="Justified Tab 2"><i>Second</i> Justified Content!</tab>
+ </tabset>
+ </file>
+ </example>
+ */
+    .directive('tabset', function() {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                type: '@'
+            },
+            controller: 'TabsetController',
+            templateUrl: 'template/tabs/tabset.html',
+            link: function(scope, element, attrs) {
+                scope.vertical = angular.isDefined(attrs.vertical) ? scope.$parent.$eval(attrs.vertical) : false;
+                scope.justified = angular.isDefined(attrs.justified) ? scope.$parent.$eval(attrs.justified) : false;
+            }
+        };
+    })
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.tabs.directive:tab
+ * @restrict EA
+ *
+ * @param {string=} heading The visible heading, or title, of the tab. Set HTML headings with {@link ui.bootstrap.tabs.directive:tabHeading tabHeading}.
+ * @param {string=} select An expression to evaluate when the tab is selected.
+ * @param {boolean=} active A binding, telling whether or not this tab is selected.
+ * @param {boolean=} disabled A binding, telling whether or not this tab is disabled.
+ *
+ * @description
+ * Creates a tab with a heading and content. Must be placed within a {@link ui.bootstrap.tabs.directive:tabset tabset}.
+ *
+ * @example
+ <example module="ui.bootstrap">
+ <file name="index.html">
+ <div ng-controller="TabsDemoCtrl">
+ <button class="btn btn-small" ng-click="items[0].active = true">
+ Select item 1, using active binding
+ </button>
+ <button class="btn btn-small" ng-click="items[1].disabled = !items[1].disabled">
+ Enable/disable item 2, using disabled binding
+ </button>
+ <br />
+ <tabset>
+ <tab heading="Tab 1">First Tab</tab>
+ <tab select="alertMe()">
+ <tab-heading><i class="icon-bell"></i> Alert me!</tab-heading>
+ Second Tab, with alert callback and html heading!
+ </tab>
+ <tab ng-repeat="item in items"
+ heading="{{item.title}}"
+ disabled="item.disabled"
+ active="item.active">
+ {{item.content}}
+ </tab>
+ </tabset>
+ </div>
+ </file>
+ <file name="script.js">
+ function TabsDemoCtrl($scope) {
+      $scope.items = [
+        { title:"Dynamic Title 1", content:"Dynamic Item 0" },
+        { title:"Dynamic Title 2", content:"Dynamic Item 1", disabled: true }
+      ];
+
+      $scope.alertMe = function() {
+        setTimeout(function() {
+          alert("You've selected the alert tab!");
+        });
+      };
+    };
+ </file>
+ </example>
+ */
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.tabs.directive:tabHeading
+ * @restrict EA
+ *
+ * @description
+ * Creates an HTML heading for a {@link ui.bootstrap.tabs.directive:tab tab}. Must be placed as a child of a tab element.
+ *
+ * @example
+ <example module="ui.bootstrap">
+ <file name="index.html">
+ <tabset>
+ <tab>
+ <tab-heading><b>HTML</b> in my titles?!</tab-heading>
+ And some content, too!
+ </tab>
+ <tab>
+ <tab-heading><i class="icon-heart"></i> Icon heading?!?</tab-heading>
+ That's right.
+ </tab>
+ </tabset>
+ </file>
+ </example>
+ */
+    .directive('tab', ['$parse', '$log', function($parse, $log) {
+        return {
+            require: '^tabset',
+            restrict: 'EA',
+            replace: true,
+            templateUrl: 'template/tabs/tab.html',
+            transclude: true,
+            scope: {
+                active: '=?',
+                heading: '@',
+                onSelect: '&select', //This callback is called in contentHeadingTransclude
+                //once it inserts the tab's content into the dom
+                onDeselect: '&deselect'
+            },
+            controller: function() {
+                //Empty controller so other directives can require being 'under' a tab
+            },
+            compile: function(elm, attrs, transclude) {
+                return function postLink(scope, elm, attrs, tabsetCtrl) {
+                    scope.$watch('active', function(active) {
+                        if (active) {
+                            tabsetCtrl.select(scope);
+                        }
+                    });
+
+                    scope.disabled = false;
+                    if ( attrs.disable ) {
+                        scope.$parent.$watch($parse(attrs.disable), function(value) {
+                            scope.disabled = !! value;
+                        });
+                    }
+
+                    // Deprecation support of "disabled" parameter
+                    // fix(tab): IE9 disabled attr renders grey text on enabled tab #2677
+                    // This code is duplicated from the lines above to make it easy to remove once
+                    // the feature has been completely deprecated
+                    if ( attrs.disabled ) {
+                        $log.warn('Use of "disabled" attribute has been deprecated, please use "disable"');
+                        scope.$parent.$watch($parse(attrs.disabled), function(value) {
+                            scope.disabled = !! value;
+                        });
+                    }
+
+                    scope.select = function() {
+                        if ( !scope.disabled ) {
+                            scope.active = true;
+                        }
+                    };
+
+                    tabsetCtrl.addTab(scope);
+                    scope.$on('$destroy', function() {
+                        tabsetCtrl.removeTab(scope);
+                    });
+
+                    //We need to transclude later, once the content container is ready.
+                    //when this link happens, we're inside a tab heading.
+                    scope.$transcludeFn = transclude;
+                };
+            }
+        };
+    }])
+
+    .directive('tabHeadingTransclude', [function() {
+        return {
+            restrict: 'A',
+            require: '^tab',
+            link: function(scope, elm, attrs, tabCtrl) {
+                scope.$watch('headingElement', function updateHeadingElement(heading) {
+                    if (heading) {
+                        elm.html('');
+                        elm.append(heading);
+                    }
+                });
+            }
+        };
+    }])
+
+    .directive('tabContentTransclude', function() {
+        return {
+            restrict: 'A',
+            require: '^tabset',
+            link: function(scope, elm, attrs) {
+                var tab = scope.$eval(attrs.tabContentTransclude);
+
+                //Now our tab is ready to be transcluded: both the tab heading area
+                //and the tab content area are loaded.  Transclude 'em both.
+                tab.$transcludeFn(tab.$parent, function(contents) {
+                    angular.forEach(contents, function(node) {
+                        if (isTabHeading(node)) {
+                            //Let tabHeadingTransclude know.
+                            tab.headingElement = node;
+                        } else {
+                            elm.append(node);
+                        }
+                    });
+                });
+            }
+        };
+        function isTabHeading(node) {
+            return node.tagName &&  (
+                    node.hasAttribute('tab-heading') ||
+                    node.hasAttribute('data-tab-heading') ||
+                    node.tagName.toLowerCase() === 'tab-heading' ||
+                    node.tagName.toLowerCase() === 'data-tab-heading'
+                );
+        }
+    })
+
+;
+
+angular.module('ui.bootstrap.timepicker', [])
+
+    .constant('timepickerConfig', {
+        hourStep: 1,
+        minuteStep: 1,
+        showMeridian: true,
+        meridians: null,
+        readonlyInput: false,
+        mousewheel: true,
+        arrowkeys: true
+    })
+
+    .controller('TimepickerController', ['$scope', '$attrs', '$parse', '$log', '$locale', 'timepickerConfig', function($scope, $attrs, $parse, $log, $locale, timepickerConfig) {
+        var selected = new Date(),
+            ngModelCtrl = { $setViewValue: angular.noop }, // nullModelCtrl
+            meridians = angular.isDefined($attrs.meridians) ? $scope.$parent.$eval($attrs.meridians) : timepickerConfig.meridians || $locale.DATETIME_FORMATS.AMPMS;
+
+        this.init = function( ngModelCtrl_, inputs ) {
+            ngModelCtrl = ngModelCtrl_;
+            ngModelCtrl.$render = this.render;
+
+            ngModelCtrl.$formatters.unshift(function (modelValue) {
+                return modelValue ? new Date( modelValue ) : null;
+            });
+
+            var hoursInputEl = inputs.eq(0),
+                minutesInputEl = inputs.eq(1);
+
+            var mousewheel = angular.isDefined($attrs.mousewheel) ? $scope.$parent.$eval($attrs.mousewheel) : timepickerConfig.mousewheel;
+            if ( mousewheel ) {
+                this.setupMousewheelEvents( hoursInputEl, minutesInputEl );
+            }
+
+            var arrowkeys = angular.isDefined($attrs.arrowkeys) ? $scope.$parent.$eval($attrs.arrowkeys) : timepickerConfig.arrowkeys;
+            if (arrowkeys) {
+                this.setupArrowkeyEvents( hoursInputEl, minutesInputEl );
+            }
+
+            $scope.readonlyInput = angular.isDefined($attrs.readonlyInput) ? $scope.$parent.$eval($attrs.readonlyInput) : timepickerConfig.readonlyInput;
+            this.setupInputEvents( hoursInputEl, minutesInputEl );
+        };
+
+        var hourStep = timepickerConfig.hourStep;
+        if ($attrs.hourStep) {
+            $scope.$parent.$watch($parse($attrs.hourStep), function(value) {
+                hourStep = parseInt(value, 10);
+            });
+        }
+
+        var minuteStep = timepickerConfig.minuteStep;
+        if ($attrs.minuteStep) {
+            $scope.$parent.$watch($parse($attrs.minuteStep), function(value) {
+                minuteStep = parseInt(value, 10);
+            });
+        }
+
+        // 12H / 24H mode
+        $scope.showMeridian = timepickerConfig.showMeridian;
+        if ($attrs.showMeridian) {
+            $scope.$parent.$watch($parse($attrs.showMeridian), function(value) {
+                $scope.showMeridian = !!value;
+
+                if ( ngModelCtrl.$error.time ) {
+                    // Evaluate from template
+                    var hours = getHoursFromTemplate(), minutes = getMinutesFromTemplate();
+                    if (angular.isDefined( hours ) && angular.isDefined( minutes )) {
+                        selected.setHours( hours );
+                        refresh();
+                    }
+                } else {
+                    updateTemplate();
+                }
+            });
+        }
+
+        // Get $scope.hours in 24H mode if valid
+        function getHoursFromTemplate ( ) {
+            var hours = parseInt( $scope.hours, 10 );
+            var valid = ( $scope.showMeridian ) ? (hours > 0 && hours < 13) : (hours >= 0 && hours < 24);
+            if ( !valid ) {
+                return undefined;
+            }
+
+            if ( $scope.showMeridian ) {
+                if ( hours === 12 ) {
+                    hours = 0;
+                }
+                if ( $scope.meridian === meridians[1] ) {
+                    hours = hours + 12;
+                }
+            }
+            return hours;
+        }
+
+        function getMinutesFromTemplate() {
+            var minutes = parseInt($scope.minutes, 10);
+            return ( minutes >= 0 && minutes < 60 ) ? minutes : undefined;
+        }
+
+        function pad( value ) {
+            return ( angular.isDefined(value) && value.toString().length < 2 ) ? '0' + value : value.toString();
+        }
+
+        // Respond on mousewheel spin
+        this.setupMousewheelEvents = function( hoursInputEl, minutesInputEl ) {
+            var isScrollingUp = function(e) {
+                if (e.originalEvent) {
+                    e = e.originalEvent;
+                }
+                //pick correct delta variable depending on event
+                var delta = (e.wheelDelta) ? e.wheelDelta : -e.deltaY;
+                return (e.detail || delta > 0);
+            };
+
+            hoursInputEl.bind('mousewheel wheel', function(e) {
+                $scope.$apply( (isScrollingUp(e)) ? $scope.incrementHours() : $scope.decrementHours() );
+                e.preventDefault();
+            });
+
+            minutesInputEl.bind('mousewheel wheel', function(e) {
+                $scope.$apply( (isScrollingUp(e)) ? $scope.incrementMinutes() : $scope.decrementMinutes() );
+                e.preventDefault();
+            });
+
+        };
+
+        // Respond on up/down arrowkeys
+        this.setupArrowkeyEvents = function( hoursInputEl, minutesInputEl ) {
+            hoursInputEl.bind('keydown', function(e) {
+                if ( e.which === 38 ) { // up
+                    e.preventDefault();
+                    $scope.incrementHours();
+                    $scope.$apply();
+                }
+                else if ( e.which === 40 ) { // down
+                    e.preventDefault();
+                    $scope.decrementHours();
+                    $scope.$apply();
+                }
+            });
+
+            minutesInputEl.bind('keydown', function(e) {
+                if ( e.which === 38 ) { // up
+                    e.preventDefault();
+                    $scope.incrementMinutes();
+                    $scope.$apply();
+                }
+                else if ( e.which === 40 ) { // down
+                    e.preventDefault();
+                    $scope.decrementMinutes();
+                    $scope.$apply();
+                }
+            });
+        };
+
+        this.setupInputEvents = function( hoursInputEl, minutesInputEl ) {
+            if ( $scope.readonlyInput ) {
+                $scope.updateHours = angular.noop;
+                $scope.updateMinutes = angular.noop;
+                return;
+            }
+
+            var invalidate = function(invalidHours, invalidMinutes) {
+                ngModelCtrl.$setViewValue( null );
+                ngModelCtrl.$setValidity('time', false);
+                if (angular.isDefined(invalidHours)) {
+                    $scope.invalidHours = invalidHours;
+                }
+                if (angular.isDefined(invalidMinutes)) {
+                    $scope.invalidMinutes = invalidMinutes;
+                }
+            };
+
+            $scope.updateHours = function() {
+                var hours = getHoursFromTemplate();
+
+                if ( angular.isDefined(hours) ) {
+                    selected.setHours( hours );
+                    refresh( 'h' );
+                } else {
+                    invalidate(true);
+                }
+            };
+
+            hoursInputEl.bind('blur', function(e) {
+                if ( !$scope.invalidHours && $scope.hours < 10) {
+                    $scope.$apply( function() {
+                        $scope.hours = pad( $scope.hours );
+                    });
+                }
+            });
+
+            $scope.updateMinutes = function() {
+                var minutes = getMinutesFromTemplate();
+
+                if ( angular.isDefined(minutes) ) {
+                    selected.setMinutes( minutes );
+                    refresh( 'm' );
+                } else {
+                    invalidate(undefined, true);
+                }
+            };
+
+            minutesInputEl.bind('blur', function(e) {
+                if ( !$scope.invalidMinutes && $scope.minutes < 10 ) {
+                    $scope.$apply( function() {
+                        $scope.minutes = pad( $scope.minutes );
+                    });
+                }
+            });
+
+        };
+
+        this.render = function() {
+            var date = ngModelCtrl.$viewValue;
+
+            if ( isNaN(date) ) {
+                ngModelCtrl.$setValidity('time', false);
+                $log.error('Timepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
+            } else {
+                if ( date ) {
+                    selected = date;
+                }
+                makeValid();
+                updateTemplate();
+            }
+        };
+
+        // Call internally when we know that model is valid.
+        function refresh( keyboardChange ) {
+            makeValid();
+            ngModelCtrl.$setViewValue( new Date(selected) );
+            updateTemplate( keyboardChange );
+        }
+
+        function makeValid() {
+            ngModelCtrl.$setValidity('time', true);
+            $scope.invalidHours = false;
+            $scope.invalidMinutes = false;
+        }
+
+        function updateTemplate( keyboardChange ) {
+            var hours = selected.getHours(), minutes = selected.getMinutes();
+
+            if ( $scope.showMeridian ) {
+                hours = ( hours === 0 || hours === 12 ) ? 12 : hours % 12; // Convert 24 to 12 hour system
+            }
+
+            $scope.hours = keyboardChange === 'h' ? hours : pad(hours);
+            if (keyboardChange !== 'm') {
+                $scope.minutes = pad(minutes);
+            }
+            $scope.meridian = selected.getHours() < 12 ? meridians[0] : meridians[1];
+        }
+
+        function addMinutes( minutes ) {
+            var dt = new Date( selected.getTime() + minutes * 60000 );
+            selected.setHours( dt.getHours(), dt.getMinutes() );
+            refresh();
+        }
+
+        $scope.incrementHours = function() {
+            addMinutes( hourStep * 60 );
+        };
+        $scope.decrementHours = function() {
+            addMinutes( - hourStep * 60 );
+        };
+        $scope.incrementMinutes = function() {
+            addMinutes( minuteStep );
+        };
+        $scope.decrementMinutes = function() {
+            addMinutes( - minuteStep );
+        };
+        $scope.toggleMeridian = function() {
+            addMinutes( 12 * 60 * (( selected.getHours() < 12 ) ? 1 : -1) );
+        };
+    }])
+
+    .directive('timepicker', function () {
+        return {
+            restrict: 'EA',
+            require: ['timepicker', '?^ngModel'],
+            controller:'TimepickerController',
+            replace: true,
+            scope: {},
+            templateUrl: 'template/timepicker/timepicker.html',
+            link: function(scope, element, attrs, ctrls) {
+                var timepickerCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+                if ( ngModelCtrl ) {
+                    timepickerCtrl.init( ngModelCtrl, element.find('input') );
+                }
+            }
+        };
+    });
+
+angular.module('ui.bootstrap.transition', [])
+
+    .value('$transitionSuppressDeprecated', false)
+/**
+ * $transition service provides a consistent interface to trigger CSS 3 transitions and to be informed when they complete.
+ * @param  {DOMElement} element  The DOMElement that will be animated.
+ * @param  {string|object|function} trigger  The thing that will cause the transition to start:
+ *   - As a string, it represents the css class to be added to the element.
+ *   - As an object, it represents a hash of style attributes to be applied to the element.
+ *   - As a function, it represents a function to be called that will cause the transition to occur.
+ * @return {Promise}  A promise that is resolved when the transition finishes.
+ */
+    .factory('$transition', [
+        '$q', '$timeout', '$rootScope', '$log', '$transitionSuppressDeprecated',
+        function($q ,  $timeout ,  $rootScope ,  $log ,  $transitionSuppressDeprecated) {
+
+            if (!$transitionSuppressDeprecated) {
+                $log.warn('$transition is now deprecated. Use $animate from ngAnimate instead.');
+            }
+
+            var $transition = function(element, trigger, options) {
+                options = options || {};
+                var deferred = $q.defer();
+                var endEventName = $transition[options.animation ? 'animationEndEventName' : 'transitionEndEventName'];
+
+                var transitionEndHandler = function(event) {
+                    $rootScope.$apply(function() {
+                        element.unbind(endEventName, transitionEndHandler);
+                        deferred.resolve(element);
+                    });
+                };
+
+                if (endEventName) {
+                    element.bind(endEventName, transitionEndHandler);
+                }
+
+                // Wrap in a timeout to allow the browser time to update the DOM before the transition is to occur
+                $timeout(function() {
+                    if ( angular.isString(trigger) ) {
+                        element.addClass(trigger);
+                    } else if ( angular.isFunction(trigger) ) {
+                        trigger(element);
+                    } else if ( angular.isObject(trigger) ) {
+                        element.css(trigger);
+                    }
+                    //If browser does not support transitions, instantly resolve
+                    if ( !endEventName ) {
+                        deferred.resolve(element);
+                    }
+                });
+
+                // Add our custom cancel function to the promise that is returned
+                // We can call this if we are about to run a new transition, which we know will prevent this transition from ending,
+                // i.e. it will therefore never raise a transitionEnd event for that transition
+                deferred.promise.cancel = function() {
+                    if ( endEventName ) {
+                        element.unbind(endEventName, transitionEndHandler);
+                    }
+                    deferred.reject('Transition cancelled');
+                };
+
+                return deferred.promise;
+            };
+
+            // Work out the name of the transitionEnd event
+            var transElement = document.createElement('trans');
+            var transitionEndEventNames = {
+                'WebkitTransition': 'webkitTransitionEnd',
+                'MozTransition': 'transitionend',
+                'OTransition': 'oTransitionEnd',
+                'transition': 'transitionend'
+            };
+            var animationEndEventNames = {
+                'WebkitTransition': 'webkitAnimationEnd',
+                'MozTransition': 'animationend',
+                'OTransition': 'oAnimationEnd',
+                'transition': 'animationend'
+            };
+            function findEndEventName(endEventNames) {
+                for (var name in endEventNames){
+                    if (transElement.style[name] !== undefined) {
+                        return endEventNames[name];
+                    }
+                }
+            }
+            $transition.transitionEndEventName = findEndEventName(transitionEndEventNames);
+            $transition.animationEndEventName = findEndEventName(animationEndEventNames);
+            return $transition;
+        }]);
+
+angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position', 'ui.bootstrap.bindHtml'])
+
+/**
+ * A helper service that can parse typeahead's syntax (string provided by users)
+ * Extracted to a separate service for ease of unit testing
+ */
+    .factory('typeaheadParser', ['$parse', function ($parse) {
+
+        //                      00000111000000000000022200000000000000003333333333333330000000000044000
+        var TYPEAHEAD_REGEXP = /^\s*([\s\S]+?)(?:\s+as\s+([\s\S]+?))?\s+for\s+(?:([\$\w][\$\w\d]*))\s+in\s+([\s\S]+?)$/;
+
+        return {
+            parse:function (input) {
+
+                var match = input.match(TYPEAHEAD_REGEXP);
+                if (!match) {
+                    throw new Error(
+                        'Expected typeahead specification in form of "_modelValue_ (as _label_)? for _item_ in _collection_"' +
+                        ' but got "' + input + '".');
+                }
+
+                return {
+                    itemName:match[3],
+                    source:$parse(match[4]),
+                    viewMapper:$parse(match[2] || match[1]),
+                    modelMapper:$parse(match[1])
+                };
+            }
+        };
+    }])
+
+    .directive('typeahead', ['$compile', '$parse', '$q', '$timeout', '$document', '$position', 'typeaheadParser',
+        function ($compile, $parse, $q, $timeout, $document, $position, typeaheadParser) {
+
+            var HOT_KEYS = [9, 13, 27, 38, 40];
+
+            return {
+                require:'ngModel',
+                link:function (originalScope, element, attrs, modelCtrl) {
+
+                    //SUPPORTED ATTRIBUTES (OPTIONS)
+
+                    //minimal no of characters that needs to be entered before typeahead kicks-in
+                    var minSearch = originalScope.$eval(attrs.typeaheadMinLength) || 1;
+
+                    //minimal wait time after last character typed before typeahead kicks-in
+                    var waitTime = originalScope.$eval(attrs.typeaheadWaitMs) || 0;
+
+                    //should it restrict model values to the ones selected from the popup only?
+                    var isEditable = originalScope.$eval(attrs.typeaheadEditable) !== false;
+
+                    //binding to a variable that indicates if matches are being retrieved asynchronously
+                    var isLoadingSetter = $parse(attrs.typeaheadLoading).assign || angular.noop;
+
+                    //a callback executed when a match is selected
+                    var onSelectCallback = $parse(attrs.typeaheadOnSelect);
+
+                    var inputFormatter = attrs.typeaheadInputFormatter ? $parse(attrs.typeaheadInputFormatter) : undefined;
+
+                    var appendToBody =  attrs.typeaheadAppendToBody ? originalScope.$eval(attrs.typeaheadAppendToBody) : false;
+
+                    var focusFirst = originalScope.$eval(attrs.typeaheadFocusFirst) !== false;
+
+                    //INTERNAL VARIABLES
+
+                    //model setter executed upon match selection
+                    var $setModelValue = $parse(attrs.ngModel).assign;
+
+                    //expressions used by typeahead
+                    var parserResult = typeaheadParser.parse(attrs.typeahead);
+
+                    var hasFocus;
+
+                    //create a child scope for the typeahead directive so we are not polluting original scope
+                    //with typeahead-specific data (matches, query etc.)
+                    var scope = originalScope.$new();
+                    originalScope.$on('$destroy', function(){
+                        scope.$destroy();
+                    });
+
+                    // WAI-ARIA
+                    var popupId = 'typeahead-' + scope.$id + '-' + Math.floor(Math.random() * 10000);
+                    element.attr({
+                        'aria-autocomplete': 'list',
+                        'aria-expanded': false,
+                        'aria-owns': popupId
+                    });
+
+                    //pop-up element used to display matches
+                    var popUpEl = angular.element('<div typeahead-popup></div>');
+                    popUpEl.attr({
+                        id: popupId,
+                        matches: 'matches',
+                        active: 'activeIdx',
+                        select: 'select(activeIdx)',
+                        query: 'query',
+                        position: 'position'
+                    });
+                    //custom item template
+                    if (angular.isDefined(attrs.typeaheadTemplateUrl)) {
+                        popUpEl.attr('template-url', attrs.typeaheadTemplateUrl);
+                    }
+
+                    var resetMatches = function() {
+                        scope.matches = [];
+                        scope.activeIdx = -1;
+                        element.attr('aria-expanded', false);
+                    };
+
+                    var getMatchId = function(index) {
+                        return popupId + '-option-' + index;
+                    };
+
+                    // Indicate that the specified match is the active (pre-selected) item in the list owned by this typeahead.
+                    // This attribute is added or removed automatically when the `activeIdx` changes.
+                    scope.$watch('activeIdx', function(index) {
+                        if (index < 0) {
+                            element.removeAttr('aria-activedescendant');
+                        } else {
+                            element.attr('aria-activedescendant', getMatchId(index));
+                        }
+                    });
+
+                    var getMatchesAsync = function(inputValue) {
+
+                        var locals = {$viewValue: inputValue};
+                        isLoadingSetter(originalScope, true);
+                        $q.when(parserResult.source(originalScope, locals)).then(function(matches) {
+
+                            //it might happen that several async queries were in progress if a user were typing fast
+                            //but we are interested only in responses that correspond to the current view value
+                            var onCurrentRequest = (inputValue === modelCtrl.$viewValue);
+                            if (onCurrentRequest && hasFocus) {
+                                if (matches && matches.length > 0) {
+
+                                    scope.activeIdx = focusFirst ? 0 : -1;
+                                    scope.matches.length = 0;
+
+                                    //transform labels
+                                    for(var i=0; i<matches.length; i++) {
+                                        locals[parserResult.itemName] = matches[i];
+                                        scope.matches.push({
+                                            id: getMatchId(i),
+                                            label: parserResult.viewMapper(scope, locals),
+                                            model: matches[i]
+                                        });
+                                    }
+
+                                    scope.query = inputValue;
+                                    //position pop-up with matches - we need to re-calculate its position each time we are opening a window
+                                    //with matches as a pop-up might be absolute-positioned and position of an input might have changed on a page
+                                    //due to other elements being rendered
+                                    scope.position = appendToBody ? $position.offset(element) : $position.position(element);
+                                    scope.position.top = scope.position.top + element.prop('offsetHeight');
+
+                                    element.attr('aria-expanded', true);
+                                } else {
+                                    resetMatches();
+                                }
+                            }
+                            if (onCurrentRequest) {
+                                isLoadingSetter(originalScope, false);
+                            }
+                        }, function(){
+                            resetMatches();
+                            isLoadingSetter(originalScope, false);
+                        });
+                    };
+
+                    resetMatches();
+
+                    //we need to propagate user's query so we can higlight matches
+                    scope.query = undefined;
+
+                    //Declare the timeout promise var outside the function scope so that stacked calls can be cancelled later
+                    var timeoutPromise;
+
+                    var scheduleSearchWithTimeout = function(inputValue) {
+                        timeoutPromise = $timeout(function () {
+                            getMatchesAsync(inputValue);
+                        }, waitTime);
+                    };
+
+                    var cancelPreviousTimeout = function() {
+                        if (timeoutPromise) {
+                            $timeout.cancel(timeoutPromise);
+                        }
+                    };
+
+                    //plug into $parsers pipeline to open a typeahead on view changes initiated from DOM
+                    //$parsers kick-in on all the changes coming from the view as well as manually triggered by $setViewValue
+                    modelCtrl.$parsers.unshift(function (inputValue) {
+
+                        hasFocus = true;
+
+                        if (inputValue && inputValue.length >= minSearch) {
+                            if (waitTime > 0) {
+                                cancelPreviousTimeout();
+                                scheduleSearchWithTimeout(inputValue);
+                            } else {
+                                getMatchesAsync(inputValue);
+                            }
+                        } else {
+                            isLoadingSetter(originalScope, false);
+                            cancelPreviousTimeout();
+                            resetMatches();
+                        }
+
+                        if (isEditable) {
+                            return inputValue;
+                        } else {
+                            if (!inputValue) {
+                                // Reset in case user had typed something previously.
+                                modelCtrl.$setValidity('editable', true);
+                                return inputValue;
+                            } else {
+                                modelCtrl.$setValidity('editable', false);
+                                return undefined;
+                            }
+                        }
+                    });
+
+                    modelCtrl.$formatters.push(function (modelValue) {
+
+                        var candidateViewValue, emptyViewValue;
+                        var locals = {};
+
+                        // The validity may be set to false via $parsers (see above) if
+                        // the model is restricted to selected values. If the model
+                        // is set manually it is considered to be valid.
+                        if (!isEditable) {
+                            modelCtrl.$setValidity('editable', true);
+                        }
+
+                        if (inputFormatter) {
+
+                            locals.$model = modelValue;
+                            return inputFormatter(originalScope, locals);
+
+                        } else {
+
+                            //it might happen that we don't have enough info to properly render input value
+                            //we need to check for this situation and simply return model value if we can't apply custom formatting
+                            locals[parserResult.itemName] = modelValue;
+                            candidateViewValue = parserResult.viewMapper(originalScope, locals);
+                            locals[parserResult.itemName] = undefined;
+                            emptyViewValue = parserResult.viewMapper(originalScope, locals);
+
+                            return candidateViewValue!== emptyViewValue ? candidateViewValue : modelValue;
+                        }
+                    });
+
+                    scope.select = function (activeIdx) {
+                        //called from within the $digest() cycle
+                        var locals = {};
+                        var model, item;
+
+                        locals[parserResult.itemName] = item = scope.matches[activeIdx].model;
+                        model = parserResult.modelMapper(originalScope, locals);
+                        $setModelValue(originalScope, model);
+                        modelCtrl.$setValidity('editable', true);
+                        modelCtrl.$setValidity('parse', true);
+
+                        onSelectCallback(originalScope, {
+                            $item: item,
+                            $model: model,
+                            $label: parserResult.viewMapper(originalScope, locals)
+                        });
+
+                        resetMatches();
+
+                        //return focus to the input element if a match was selected via a mouse click event
+                        // use timeout to avoid $rootScope:inprog error
+                        $timeout(function() { element[0].focus(); }, 0, false);
+                    };
+
+                    //bind keyboard events: arrows up(38) / down(40), enter(13) and tab(9), esc(27)
+                    element.bind('keydown', function (evt) {
+
+                        //typeahead is open and an "interesting" key was pressed
+                        if (scope.matches.length === 0 || HOT_KEYS.indexOf(evt.which) === -1) {
+                            return;
+                        }
+
+                        // if there's nothing selected (i.e. focusFirst) and enter is hit, don't do anything
+                        if (scope.activeIdx == -1 && (evt.which === 13 || evt.which === 9)) {
+                            return;
+                        }
+
+                        evt.preventDefault();
+
+                        if (evt.which === 40) {
+                            scope.activeIdx = (scope.activeIdx + 1) % scope.matches.length;
+                            scope.$digest();
+
+                        } else if (evt.which === 38) {
+                            scope.activeIdx = (scope.activeIdx > 0 ? scope.activeIdx : scope.matches.length) - 1;
+                            scope.$digest();
+
+                        } else if (evt.which === 13 || evt.which === 9) {
+                            scope.$apply(function () {
+                                scope.select(scope.activeIdx);
+                            });
+
+                        } else if (evt.which === 27) {
+                            evt.stopPropagation();
+
+                            resetMatches();
+                            scope.$digest();
+                        }
+                    });
+
+                    element.bind('blur', function (evt) {
+                        hasFocus = false;
+                    });
+
+                    // Keep reference to click handler to unbind it.
+                    var dismissClickHandler = function (evt) {
+                        if (element[0] !== evt.target) {
+                            resetMatches();
+                            scope.$digest();
+                        }
+                    };
+
+                    $document.bind('click', dismissClickHandler);
+
+                    originalScope.$on('$destroy', function(){
+                        $document.unbind('click', dismissClickHandler);
+                        if (appendToBody) {
+                            $popup.remove();
+                        }
+                        // Prevent jQuery cache memory leak
+                        popUpEl.remove();
+                    });
+
+                    var $popup = $compile(popUpEl)(scope);
+
+                    if (appendToBody) {
+                        $document.find('body').append($popup);
+                    } else {
+                        element.after($popup);
+                    }
+                }
+            };
+
+        }])
+
+    .directive('typeaheadPopup', function () {
+        return {
+            restrict:'EA',
+            scope:{
+                matches:'=',
+                query:'=',
+                active:'=',
+                position:'=',
+                select:'&'
+            },
+            replace:true,
+            templateUrl:'template/typeahead/typeahead-popup.html',
+            link:function (scope, element, attrs) {
+
+                scope.templateUrl = attrs.templateUrl;
+
+                scope.isOpen = function () {
+                    return scope.matches.length > 0;
+                };
+
+                scope.isActive = function (matchIdx) {
+                    return scope.active == matchIdx;
+                };
+
+                scope.selectActive = function (matchIdx) {
+                    scope.active = matchIdx;
+                };
+
+                scope.selectMatch = function (activeIdx) {
+                    scope.select({activeIdx:activeIdx});
+                };
+            }
+        };
+    })
+
+    .directive('typeaheadMatch', ['$templateRequest', '$compile', '$parse', function ($templateRequest, $compile, $parse) {
+        return {
+            restrict:'EA',
+            scope:{
+                index:'=',
+                match:'=',
+                query:'='
+            },
+            link:function (scope, element, attrs) {
+                var tplUrl = $parse(attrs.templateUrl)(scope.$parent) || 'template/typeahead/typeahead-match.html';
+                $templateRequest(tplUrl).then(function(tplContent) {
+                    $compile(tplContent.trim())(scope, function(clonedElement){
+                        element.replaceWith(clonedElement);
+                    });
+                });
+            }
+        };
+    }])
+
+    .filter('typeaheadHighlight', function() {
+
+        function escapeRegexp(queryToEscape) {
+            return queryToEscape.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1');
+        }
+
+        return function(matchItem, query) {
+            return query ? ('' + matchItem).replace(new RegExp(escapeRegexp(query), 'gi'), '<strong>$&</strong>') : matchItem;
+        };
+    });
+
+angular.module("template/accordion/accordion-group.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/accordion/accordion-group.html",
+        "<div class=\"panel panel-default\">\n" +
+        "  <div class=\"panel-heading\">\n" +
+        "    <h4 class=\"panel-title\">\n" +
+        "      <a href=\"javascript:void(0)\" tabindex=\"0\" class=\"accordion-toggle\" ng-click=\"toggleOpen()\" accordion-transclude=\"heading\"><span ng-class=\"{'text-muted': isDisabled}\">{{heading}}</span></a>\n" +
+        "    </h4>\n" +
+        "  </div>\n" +
+        "  <div class=\"panel-collapse collapse\" collapse=\"!isOpen\">\n" +
+        "	  <div class=\"panel-body\" ng-transclude></div>\n" +
+        "  </div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/accordion/accordion.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/accordion/accordion.html",
+        "<div class=\"panel-group\" ng-transclude></div>");
+}]);
+
+angular.module("template/alert/alert.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/alert/alert.html",
+        "<div class=\"alert\" ng-class=\"['alert-' + (type || 'warning'), closeable ? 'alert-dismissable' : null]\" role=\"alert\">\n" +
+        "    <button ng-show=\"closeable\" type=\"button\" class=\"close\" ng-click=\"close()\">\n" +
+        "        <span aria-hidden=\"true\">&times;</span>\n" +
+        "        <span class=\"sr-only\">Close</span>\n" +
+        "    </button>\n" +
+        "    <div ng-transclude></div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/carousel/carousel.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/carousel/carousel.html",
+        "<div ng-mouseenter=\"pause()\" ng-mouseleave=\"play()\" class=\"carousel\" ng-swipe-right=\"prev()\" ng-swipe-left=\"next()\">\n" +
+        "    <ol class=\"carousel-indicators\" ng-show=\"slides.length > 1\">\n" +
+        "        <li ng-repeat=\"slide in slides | orderBy:'index' track by $index\" ng-class=\"{active: isActive(slide)}\" ng-click=\"select(slide)\"></li>\n" +
+        "    </ol>\n" +
+        "    <div class=\"carousel-inner\" ng-transclude></div>\n" +
+        "    <a class=\"left carousel-control\" ng-click=\"prev()\" ng-show=\"slides.length > 1\"><span class=\"glyphicon glyphicon-chevron-left\"></span></a>\n" +
+        "    <a class=\"right carousel-control\" ng-click=\"next()\" ng-show=\"slides.length > 1\"><span class=\"glyphicon glyphicon-chevron-right\"></span></a>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/carousel/slide.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/carousel/slide.html",
+        "<div ng-class=\"{\n" +
+        "    'active': active\n" +
+        "  }\" class=\"item text-center\" ng-transclude></div>\n" +
+        "");
+}]);
+
+angular.module("template/datepicker/datepicker.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/datepicker/datepicker.html",
+        "<div ng-switch=\"datepickerMode\" role=\"application\" ng-keydown=\"keydown($event)\">\n" +
+        "  <daypicker ng-switch-when=\"day\" tabindex=\"0\"></daypicker>\n" +
+        "  <monthpicker ng-switch-when=\"month\" tabindex=\"0\"></monthpicker>\n" +
+        "  <yearpicker ng-switch-when=\"year\" tabindex=\"0\"></yearpicker>\n" +
+        "</div>");
+}]);
+
+angular.module("template/datepicker/day.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/datepicker/day.html",
+        "<table role=\"grid\" aria-labelledby=\"{{uniqueId}}-title\" aria-activedescendant=\"{{activeDateId}}\">\n" +
+        "  <thead>\n" +
+        "    <tr>\n" +
+        "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-left\" ng-click=\"move(-1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-left\"></i></button></th>\n" +
+        "      <th colspan=\"{{5 + showWeeks}}\"><button id=\"{{uniqueId}}-title\" role=\"heading\" aria-live=\"assertive\" aria-atomic=\"true\" type=\"button\" class=\"btn btn-default btn-sm\" ng-click=\"toggleMode()\" ng-disabled=\"datepickerMode === maxMode\" tabindex=\"-1\" style=\"width:100%;\"><strong>{{title}}</strong></button></th>\n" +
+        "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-right\" ng-click=\"move(1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-right\"></i></button></th>\n" +
+        "    </tr>\n" +
+        "    <tr>\n" +
+        "      <th ng-show=\"showWeeks\" class=\"text-center\"></th>\n" +
+        "      <th ng-repeat=\"label in labels track by $index\" class=\"text-center\"><small aria-label=\"{{label.full}}\">{{label.abbr}}</small></th>\n" +
+        "    </tr>\n" +
+        "  </thead>\n" +
+        "  <tbody>\n" +
+        "    <tr ng-repeat=\"row in rows track by $index\">\n" +
+        "      <td ng-show=\"showWeeks\" class=\"text-center h6\"><em>{{ weekNumbers[$index] }}</em></td>\n" +
+        "      <td ng-repeat=\"dt in row track by dt.date\" class=\"text-center\" role=\"gridcell\" id=\"{{dt.uid}}\" aria-disabled=\"{{!!dt.disabled}}\" ng-class=\"dt.customClass\">\n" +
+        "        <button type=\"button\" style=\"width:100%;\" class=\"btn btn-default btn-sm\" ng-class=\"{'btn-info': dt.selected, active: isActive(dt)}\" ng-click=\"select(dt.date)\" ng-disabled=\"dt.disabled\" tabindex=\"-1\"><span ng-class=\"{'text-muted': dt.secondary, 'text-info': dt.current}\">{{dt.label}}</span></button>\n" +
+        "      </td>\n" +
+        "    </tr>\n" +
+        "  </tbody>\n" +
+        "</table>\n" +
+        "");
+}]);
+
+angular.module("template/datepicker/month.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/datepicker/month.html",
+        "<table role=\"grid\" aria-labelledby=\"{{uniqueId}}-title\" aria-activedescendant=\"{{activeDateId}}\">\n" +
+        "  <thead>\n" +
+        "    <tr>\n" +
+        "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-left\" ng-click=\"move(-1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-left\"></i></button></th>\n" +
+        "      <th><button id=\"{{uniqueId}}-title\" role=\"heading\" aria-live=\"assertive\" aria-atomic=\"true\" type=\"button\" class=\"btn btn-default btn-sm\" ng-click=\"toggleMode()\" ng-disabled=\"datepickerMode === maxMode\" tabindex=\"-1\" style=\"width:100%;\"><strong>{{title}}</strong></button></th>\n" +
+        "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-right\" ng-click=\"move(1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-right\"></i></button></th>\n" +
+        "    </tr>\n" +
+        "  </thead>\n" +
+        "  <tbody>\n" +
+        "    <tr ng-repeat=\"row in rows track by $index\">\n" +
+        "      <td ng-repeat=\"dt in row track by dt.date\" class=\"text-center\" role=\"gridcell\" id=\"{{dt.uid}}\" aria-disabled=\"{{!!dt.disabled}}\">\n" +
+        "        <button type=\"button\" style=\"width:100%;\" class=\"btn btn-default\" ng-class=\"{'btn-info': dt.selected, active: isActive(dt)}\" ng-click=\"select(dt.date)\" ng-disabled=\"dt.disabled\" tabindex=\"-1\"><span ng-class=\"{'text-info': dt.current}\">{{dt.label}}</span></button>\n" +
+        "      </td>\n" +
+        "    </tr>\n" +
+        "  </tbody>\n" +
+        "</table>\n" +
+        "");
+}]);
+
+angular.module("template/datepicker/popup.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/datepicker/popup.html",
+        "<ul class=\"dropdown-menu\" ng-style=\"{display: (isOpen && 'block') || 'none', top: position.top+'px', left: position.left+'px'}\" ng-keydown=\"keydown($event)\">\n" +
+        "	<li ng-transclude></li>\n" +
+        "	<li ng-if=\"showButtonBar\" style=\"padding:10px 9px 2px\">\n" +
+        "		<span class=\"btn-group pull-left\">\n" +
+        "			<button type=\"button\" class=\"btn btn-sm btn-info\" ng-click=\"select('today')\">{{ getText('current') }}</button>\n" +
+        "			<button type=\"button\" class=\"btn btn-sm btn-danger\" ng-click=\"select(null)\">{{ getText('clear') }}</button>\n" +
+        "		</span>\n" +
+        "		<button type=\"button\" class=\"btn btn-sm btn-success pull-right\" ng-click=\"close()\">{{ getText('close') }}</button>\n" +
+        "	</li>\n" +
+        "</ul>\n" +
+        "");
+}]);
+
+angular.module("template/datepicker/year.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/datepicker/year.html",
+        "<table role=\"grid\" aria-labelledby=\"{{uniqueId}}-title\" aria-activedescendant=\"{{activeDateId}}\">\n" +
+        "  <thead>\n" +
+        "    <tr>\n" +
+        "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-left\" ng-click=\"move(-1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-left\"></i></button></th>\n" +
+        "      <th colspan=\"3\"><button id=\"{{uniqueId}}-title\" role=\"heading\" aria-live=\"assertive\" aria-atomic=\"true\" type=\"button\" class=\"btn btn-default btn-sm\" ng-click=\"toggleMode()\" ng-disabled=\"datepickerMode === maxMode\" tabindex=\"-1\" style=\"width:100%;\"><strong>{{title}}</strong></button></th>\n" +
+        "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-right\" ng-click=\"move(1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-right\"></i></button></th>\n" +
+        "    </tr>\n" +
+        "  </thead>\n" +
+        "  <tbody>\n" +
+        "    <tr ng-repeat=\"row in rows track by $index\">\n" +
+        "      <td ng-repeat=\"dt in row track by dt.date\" class=\"text-center\" role=\"gridcell\" id=\"{{dt.uid}}\" aria-disabled=\"{{!!dt.disabled}}\">\n" +
+        "        <button type=\"button\" style=\"width:100%;\" class=\"btn btn-default\" ng-class=\"{'btn-info': dt.selected, active: isActive(dt)}\" ng-click=\"select(dt.date)\" ng-disabled=\"dt.disabled\" tabindex=\"-1\"><span ng-class=\"{'text-info': dt.current}\">{{dt.label}}</span></button>\n" +
+        "      </td>\n" +
+        "    </tr>\n" +
+        "  </tbody>\n" +
+        "</table>\n" +
+        "");
+}]);
+
+angular.module("template/modal/backdrop.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/modal/backdrop.html",
+        "<div class=\"modal-backdrop\"\n" +
+        "     modal-animation-class=\"fade\"\n" +
+        "     ng-class=\"{in: animate}\"\n" +
+        "     ng-style=\"{'z-index': 1040 + (index && 1 || 0) + index*10}\"\n" +
+        "></div>\n" +
+        "");
+}]);
+
+angular.module("template/modal/window.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/modal/window.html",
+        "<div modal-render=\"{{$isRendered}}\" tabindex=\"-1\" role=\"dialog\" class=\"modal\"\n" +
+        "    modal-animation-class=\"fade\"\n" +
+        "	ng-class=\"{in: animate}\" ng-style=\"{'z-index': 1050 + index*10, display: 'block'}\" ng-click=\"close($event)\">\n" +
+        "    <div class=\"modal-dialog\" ng-class=\"size ? 'modal-' + size : ''\"><div class=\"modal-content\" modal-transclude></div></div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/pagination/pager.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/pagination/pager.html",
+        "<ul class=\"pager\">\n" +
+        "  <li ng-class=\"{disabled: noPrevious(), previous: align}\"><a href ng-click=\"selectPage(page - 1, $event)\">{{getText('previous')}}</a></li>\n" +
+        "  <li ng-class=\"{disabled: noNext(), next: align}\"><a href ng-click=\"selectPage(page + 1, $event)\">{{getText('next')}}</a></li>\n" +
+        "</ul>");
+}]);
+
+angular.module("template/pagination/pagination.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/pagination/pagination.html",
+        "<ul class=\"pagination\">\n" +
+        "  <li ng-if=\"boundaryLinks\" ng-class=\"{disabled: noPrevious()}\"><a href ng-click=\"selectPage(1, $event)\">{{getText('first')}}</a></li>\n" +
+        "  <li ng-if=\"directionLinks\" ng-class=\"{disabled: noPrevious()}\"><a href ng-click=\"selectPage(page - 1, $event)\">{{getText('previous')}}</a></li>\n" +
+        "  <li ng-repeat=\"page in pages track by $index\" ng-class=\"{active: page.active}\"><a href ng-click=\"selectPage(page.number, $event)\">{{page.text}}</a></li>\n" +
+        "  <li ng-if=\"directionLinks\" ng-class=\"{disabled: noNext()}\"><a href ng-click=\"selectPage(page + 1, $event)\">{{getText('next')}}</a></li>\n" +
+        "  <li ng-if=\"boundaryLinks\" ng-class=\"{disabled: noNext()}\"><a href ng-click=\"selectPage(totalPages, $event)\">{{getText('last')}}</a></li>\n" +
+        "</ul>");
+}]);
+
+angular.module("template/tooltip/tooltip-html-popup.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/tooltip/tooltip-html-popup.html",
+        "<div class=\"tooltip\"\n" +
+        "  tooltip-animation-class=\"fade\"\n" +
+        "  tooltip-classes\n" +
+        "  ng-class=\"{ in: isOpen() }\">\n" +
+        "  <div class=\"tooltip-arrow\"></div>\n" +
+        "  <div class=\"tooltip-inner\" ng-bind-html=\"contentExp()\"></div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/tooltip/tooltip-html-unsafe-popup.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/tooltip/tooltip-html-unsafe-popup.html",
+        "<div class=\"tooltip\"\n" +
+        "  tooltip-animation-class=\"fade\"\n" +
+        "  tooltip-classes\n" +
+        "  ng-class=\"{ in: isOpen() }\">\n" +
+        "  <div class=\"tooltip-arrow\"></div>\n" +
+        "  <div class=\"tooltip-inner\" bind-html-unsafe=\"content\"></div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/tooltip/tooltip-popup.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/tooltip/tooltip-popup.html",
+        "<div class=\"tooltip\"\n" +
+        "  tooltip-animation-class=\"fade\"\n" +
+        "  tooltip-classes\n" +
+        "  ng-class=\"{ in: isOpen() }\">\n" +
+        "  <div class=\"tooltip-arrow\"></div>\n" +
+        "  <div class=\"tooltip-inner\" ng-bind=\"content\"></div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/tooltip/tooltip-template-popup.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/tooltip/tooltip-template-popup.html",
+        "<div class=\"tooltip\"\n" +
+        "  tooltip-animation-class=\"fade\"\n" +
+        "  tooltip-classes\n" +
+        "  ng-class=\"{ in: isOpen() }\">\n" +
+        "  <div class=\"tooltip-arrow\"></div>\n" +
+        "  <div class=\"tooltip-inner\"\n" +
+        "    tooltip-template-transclude=\"contentExp()\"\n" +
+        "    tooltip-template-transclude-scope=\"originScope()\"></div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/popover/popover-template.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/popover/popover-template.html",
+        "<div class=\"popover\"\n" +
+        "  tooltip-animation-class=\"fade\"\n" +
+        "  tooltip-classes\n" +
+        "  ng-class=\"{ in: isOpen() }\">\n" +
+        "  <div class=\"arrow\"></div>\n" +
+        "\n" +
+        "  <div class=\"popover-inner\">\n" +
+        "      <h3 class=\"popover-title\" ng-bind=\"title\" ng-if=\"title\"></h3>\n" +
+        "      <div class=\"popover-content\"\n" +
+        "        tooltip-template-transclude=\"contentExp()\"\n" +
+        "        tooltip-template-transclude-scope=\"originScope()\"></div>\n" +
+        "  </div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/popover/popover-window.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/popover/popover-window.html",
+        "<div class=\"popover {{placement}}\" ng-class=\"{ in: isOpen, fade: animation }\">\n" +
+        "  <div class=\"arrow\"></div>\n" +
+        "\n" +
+        "  <div class=\"popover-inner\">\n" +
+        "      <h3 class=\"popover-title\" ng-bind=\"title\" ng-show=\"title\"></h3>\n" +
+        "      <div class=\"popover-content\" tooltip-template-transclude></div>\n" +
+        "  </div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/popover/popover.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/popover/popover.html",
+        "<div class=\"popover\"\n" +
+        "  tooltip-animation-class=\"fade\"\n" +
+        "  tooltip-classes\n" +
+        "  ng-class=\"{ in: isOpen() }\">\n" +
+        "  <div class=\"arrow\"></div>\n" +
+        "\n" +
+        "  <div class=\"popover-inner\">\n" +
+        "      <h3 class=\"popover-title\" ng-bind=\"title\" ng-if=\"title\"></h3>\n" +
+        "      <div class=\"popover-content\" ng-bind=\"content\"></div>\n" +
+        "  </div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/progressbar/bar.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/progressbar/bar.html",
+        "<div class=\"progress-bar\" ng-class=\"type && 'progress-bar-' + type\" role=\"progressbar\" aria-valuenow=\"{{value}}\" aria-valuemin=\"0\" aria-valuemax=\"{{max}}\" ng-style=\"{width: (percent < 100 ? percent : 100) + '%'}\" aria-valuetext=\"{{percent | number:0}}%\" ng-transclude></div>\n" +
+        "");
+}]);
+
+angular.module("template/progressbar/progress.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/progressbar/progress.html",
+        "<div class=\"progress\" ng-transclude></div>");
+}]);
+
+angular.module("template/progressbar/progressbar.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/progressbar/progressbar.html",
+        "<div class=\"progress\">\n" +
+        "  <div class=\"progress-bar\" ng-class=\"type && 'progress-bar-' + type\" role=\"progressbar\" aria-valuenow=\"{{value}}\" aria-valuemin=\"0\" aria-valuemax=\"{{max}}\" ng-style=\"{width: (percent < 100 ? percent : 100) + '%'}\" aria-valuetext=\"{{percent | number:0}}%\" ng-transclude></div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/rating/rating.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/rating/rating.html",
+        "<span ng-mouseleave=\"reset()\" ng-keydown=\"onKeydown($event)\" tabindex=\"0\" role=\"slider\" aria-valuemin=\"0\" aria-valuemax=\"{{range.length}}\" aria-valuenow=\"{{value}}\">\n" +
+        "    <i ng-repeat=\"r in range track by $index\" ng-mouseenter=\"enter($index + 1)\" ng-click=\"rate($index + 1)\" class=\"glyphicon\" ng-class=\"$index < value && (r.stateOn || 'glyphicon-star') || (r.stateOff || 'glyphicon-star-empty')\">\n" +
+        "        <span class=\"sr-only\">({{ $index < value ? '*' : ' ' }})</span>\n" +
+        "    </i>\n" +
+        "</span>");
+}]);
+
+angular.module("template/tabs/tab.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/tabs/tab.html",
+        "<li ng-class=\"{active: active, disabled: disabled}\">\n" +
+        "  <a href ng-click=\"select()\" tab-heading-transclude>{{heading}}</a>\n" +
+        "</li>\n" +
+        "");
+}]);
+
+angular.module("template/tabs/tabset.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/tabs/tabset.html",
+        "<div>\n" +
+        "  <ul class=\"nav nav-{{type || 'tabs'}}\" ng-class=\"{'nav-stacked': vertical, 'nav-justified': justified}\" ng-transclude></ul>\n" +
+        "  <div class=\"tab-content\">\n" +
+        "    <div class=\"tab-pane\" \n" +
+        "         ng-repeat=\"tab in tabs\" \n" +
+        "         ng-class=\"{active: tab.active}\"\n" +
+        "         tab-content-transclude=\"tab\">\n" +
+        "    </div>\n" +
+        "  </div>\n" +
+        "</div>\n" +
+        "");
+}]);
+
+angular.module("template/timepicker/timepicker.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/timepicker/timepicker.html",
+        "<table>\n" +
+        "	<tbody>\n" +
+        "		<tr class=\"text-center\">\n" +
+        "			<td><a ng-click=\"incrementHours()\" class=\"btn btn-link\"><span class=\"glyphicon glyphicon-chevron-up\"></span></a></td>\n" +
+        "			<td>&nbsp;</td>\n" +
+        "			<td><a ng-click=\"incrementMinutes()\" class=\"btn btn-link\"><span class=\"glyphicon glyphicon-chevron-up\"></span></a></td>\n" +
+        "			<td ng-show=\"showMeridian\"></td>\n" +
+        "		</tr>\n" +
+        "		<tr>\n" +
+        "			<td class=\"form-group\" ng-class=\"{'has-error': invalidHours}\">\n" +
+        "				<input style=\"width:50px;\" type=\"text\" ng-model=\"hours\" ng-change=\"updateHours()\" class=\"form-control text-center\" ng-readonly=\"readonlyInput\" maxlength=\"2\">\n" +
+        "			</td>\n" +
+        "			<td>:</td>\n" +
+        "			<td class=\"form-group\" ng-class=\"{'has-error': invalidMinutes}\">\n" +
+        "				<input style=\"width:50px;\" type=\"text\" ng-model=\"minutes\" ng-change=\"updateMinutes()\" class=\"form-control text-center\" ng-readonly=\"readonlyInput\" maxlength=\"2\">\n" +
+        "			</td>\n" +
+        "			<td ng-show=\"showMeridian\"><button type=\"button\" class=\"btn btn-default text-center\" ng-click=\"toggleMeridian()\">{{meridian}}</button></td>\n" +
+        "		</tr>\n" +
+        "		<tr class=\"text-center\">\n" +
+        "			<td><a ng-click=\"decrementHours()\" class=\"btn btn-link\"><span class=\"glyphicon glyphicon-chevron-down\"></span></a></td>\n" +
+        "			<td>&nbsp;</td>\n" +
+        "			<td><a ng-click=\"decrementMinutes()\" class=\"btn btn-link\"><span class=\"glyphicon glyphicon-chevron-down\"></span></a></td>\n" +
+        "			<td ng-show=\"showMeridian\"></td>\n" +
+        "		</tr>\n" +
+        "	</tbody>\n" +
+        "</table>\n" +
+        "");
+}]);
+
+angular.module("template/typeahead/typeahead-match.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/typeahead/typeahead-match.html",
+        "<a tabindex=\"-1\" bind-html-unsafe=\"match.label | typeaheadHighlight:query\"></a>");
+}]);
+
+angular.module("template/typeahead/typeahead-popup.html", []).run(["$templateCache", function($templateCache) {
+    $templateCache.put("template/typeahead/typeahead-popup.html",
+        "<ul class=\"dropdown-menu\" ng-show=\"isOpen()\" ng-style=\"{top: position.top+'px', left: position.left+'px'}\" style=\"display: block;\" role=\"listbox\" aria-hidden=\"{{!isOpen()}}\">\n" +
+        "    <li ng-repeat=\"match in matches track by $index\" ng-class=\"{active: isActive($index) }\" ng-mouseenter=\"selectActive($index)\" ng-click=\"selectMatch($index)\" role=\"option\" id=\"{{match.id}}\">\n" +
+        "        <div typeahead-match index=\"$index\" match=\"match\" query=\"query\" template-url=\"templateUrl\"></div>\n" +
+        "    </li>\n" +
+        "</ul>\n" +
+        "");
+}]);
+!angular.$$csp() && angular.element(document).find('head').prepend('<style type="text/css">.ng-animate.item:not(.left):not(.right){-webkit-transition:0s ease-in-out left;transition:0s ease-in-out left}</style>');
+define("uiboot", ["angularjs"], function(){});
+
+define('app/base',['angularjs', 'angularroute', 'basefileupload', 'sanitize', 'anganimate', 'fbase', 'afire', 'uiboot'], function(angular, route, basefileupload, sanitize, anganimate, Firebase, afire) {
   var TimeSheetApp;
-  TimeSheetApp = angular.module('timeSheetApp', ['ngRoute', 'naif.base64', 'ngSanitize', 'ngAnimate', 'firebase']).config([
+  TimeSheetApp = angular.module('timeSheetApp', ['ngRoute', 'naif.base64', 'ngSanitize', 'ngAnimate', 'firebase', 'ui.bootstrap']).config([
     '$routeProvider', function($routeProvider) {
       $routeProvider.when('/', {
         template: '<div class="row text-center ng-cloak"><div class="col-md-12"></div><i class=""></i>The App Canvas</div>',
@@ -5778,7 +10615,7 @@ define('app/base',['angularjs', 'angularroute', 'basefileupload', 'sanitize', 'a
   return TimeSheetApp;
 });
 
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9hcHAvYmFzZS5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi9Vc2Vycy9rcmlzaG5hcm9raGFsZS9jb2RlL2xldmVsL2xldmVsL3RpbWVzaGVldGFwcC9hc3NldHMvamF2YXNjcmlwdHMvYXBwL2Jhc2UuY29mZmVlIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBLE1BQUEsQ0FBTyxDQUFFLFdBQUYsRUFBZSxjQUFmLEVBQStCLGdCQUEvQixFQUFpRCxVQUFqRCxFQUE2RCxZQUE3RCxFQUEwRSxPQUExRSxFQUFtRixPQUFuRixDQUFQLEVBQW1HLFNBQUMsT0FBRCxFQUFVLEtBQVYsRUFBaUIsY0FBakIsRUFBaUMsUUFBakMsRUFBMkMsVUFBM0MsRUFBdUQsUUFBdkQsRUFBaUUsS0FBakUsR0FBQTtBQUdqRyxNQUFBLFlBQUE7QUFBQSxFQUFBLFlBQUEsR0FBZSxPQUFPLENBQUMsTUFBUixDQUFnQixjQUFoQixFQUErQixDQUFFLFNBQUYsRUFBYSxhQUFiLEVBQTRCLFlBQTVCLEVBQTBDLFdBQTFDLEVBQXVELFVBQXZELENBQS9CLENBQWlHLENBQUMsTUFBbEcsQ0FBMEc7SUFDMUcsZ0JBRDBHLEVBRTNHLFNBQUMsY0FBRCxHQUFBO0FBRUUsTUFBQSxjQUFjLENBQUMsSUFBZixDQUFxQixHQUFyQixFQUVFO0FBQUEsUUFBQSxRQUFBLEVBQVcseUdBQVg7QUFBQSxRQUNBLFVBQUEsRUFBYTtVQUFFLFdBQUYsRUFBZSxZQUFmLEVBQTRCLFNBQUMsU0FBRCxFQUFZLFVBQVosR0FBQTttQkFDdkMsU0FBUyxDQUFDLElBQVYsQ0FBZSxVQUFVLENBQUMsUUFBMUIsRUFEdUM7VUFBQSxDQUE1QjtTQURiO09BRkYsQ0FBQSxDQUFBO2FBT0EsY0FBYyxDQUFDLElBQWYsQ0FBcUIsWUFBckIsRUFDRTtBQUFBLFFBQUEsV0FBQSxFQUFjLDJDQUFkO0FBQUEsUUFDQSxVQUFBLEVBQWEscUJBRGI7T0FERixFQVRGO0lBQUEsQ0FGMkc7R0FBMUcsQ0FBZixDQUFBO0FBQUEsRUFpQkEsWUFBWSxDQUFDLEdBQWIsQ0FBa0I7SUFDZixZQURlLEVBQ0QsV0FEQyxFQUNZLFNBRFosRUFDdUIsaUJBRHZCLEVBQzBDLFFBRDFDLEVBQ29ELFVBRHBELEVBRWhCLFNBQUMsVUFBRCxFQUFhLFNBQWIsRUFBd0IsT0FBeEIsRUFBaUMsZUFBakMsRUFBa0QsTUFBbEQsRUFBMEQsUUFBMUQsR0FBQTtBQUNFLFVBQUEsSUFBQTtBQUFBLE1BQUEsVUFBVSxDQUFDLFFBQVgsR0FBc0IsU0FBdEIsQ0FBQTtBQUFBLE1BQ0EsVUFBVSxDQUFDLFVBQVgsR0FBd0IsS0FEeEIsQ0FBQTtBQUFBLE1BRUEsSUFBQSxHQUFPLGVBQWUsQ0FBQyxPQUFPLENBQUMsT0FBeEIsQ0FBQSxDQUZQLENBQUE7QUFBQSxNQUdBLFVBQVUsQ0FBQyxPQUFYLEdBQXFCLGVBQWUsQ0FBQyxPQUhyQyxDQUFBO0FBQUEsTUFLQSxVQUFVLENBQUMsR0FBWCxDQUFnQix3QkFBaEIsRUFBeUMsU0FBQSxHQUFBO0FBQ3ZDLFFBQUEsVUFBVSxDQUFDLFFBQVgsR0FBc0IsTUFBTSxDQUFDLFFBQVEsQ0FBQyxRQUF0QyxDQUFBO2VBQ0EsVUFBVSxDQUFDLFlBQVgsR0FBMEIsTUFBTSxDQUFDLFFBQVEsQ0FBQyxLQUZIO01BQUEsQ0FBekMsQ0FMQSxDQUFBO0FBQUEsTUFTQSxVQUFVLENBQUMsWUFBWCxHQUEwQixTQUFBLEdBQUE7ZUFDeEIsVUFBVSxDQUFDLFdBQVgsR0FBeUIsTUFERDtNQUFBLENBVDFCLENBQUE7QUFBQSxNQWFBLFVBQVUsQ0FBQyxhQUFYLEdBQTJCLFNBQUMsSUFBRCxHQUFBO2VBQ3pCLElBQUksQ0FBQyxXQUFMLENBQUEsQ0FBa0IsQ0FBQyxPQUFuQixDQUEyQixVQUEzQixFQUF1QyxFQUF2QyxDQUF5QyxDQUFDLE9BQTFDLENBQWtELFVBQWxELEVBQThELEdBQTlELEVBRHlCO01BQUEsQ0FiM0IsQ0FBQTtBQWlCQSxNQUFBLElBQUcsSUFBSDtBQUNFLFFBQUEsVUFBVSxDQUFDLFVBQVgsR0FBd0IsSUFBSSxDQUFDLEdBQTdCLENBQUE7QUFBQSxRQUdBLFVBQVUsQ0FBQyxPQUFPLENBQUMsS0FBbkIsQ0FBMEIsUUFBQSxHQUFRLElBQUksQ0FBQyxHQUFiLEdBQWlCLFFBQTNDLENBQW1ELENBQUMsSUFBcEQsQ0FBMEQsT0FBMUQsRUFBa0UsU0FBQyxJQUFELEdBQUE7aUJBRWhFLFVBQVUsQ0FBQyxNQUFYLENBQWtCLFNBQUEsR0FBQTtBQUNoQixZQUFBLFVBQVUsQ0FBQyxTQUFYLEdBQXVCLElBQUksQ0FBQyxHQUFMLENBQUEsQ0FBdkIsQ0FBQTtBQUFBLFlBQ0EsVUFBVSxDQUFDLGNBQVgsR0FBNEIsVUFBVSxDQUFDLE9BQU8sQ0FBQyxLQUFuQixDQUEwQixRQUFBLEdBQVEsSUFBSSxDQUFDLEdBQXZDLENBRDVCLENBQUE7bUJBRUEsVUFBVSxDQUFDLFVBQVgsR0FBd0IsS0FIUjtVQUFBLENBQWxCLEVBRmdFO1FBQUEsQ0FBbEUsQ0FIQSxDQUFBO2VBVUEsU0FBUyxDQUFDLElBQVYsQ0FBZ0IsWUFBaEIsRUFYRjtPQUFBLE1BQUE7ZUFjRSxNQUFNLENBQUMsUUFBUCxHQUFtQixXQWRyQjtPQWxCRjtJQUFBLENBRmdCO0dBQWxCLENBakJBLENBQUE7QUFBQSxFQXlEQSxPQUFPLENBQUMsT0FBUixDQUFnQixRQUFoQixDQUF5QixDQUFDLEtBQTFCLENBQWdDLFNBQUEsR0FBQTtXQUM5QixPQUFPLENBQUMsU0FBUixDQUFrQixRQUFsQixFQUE0QixDQUFFLGNBQUYsQ0FBNUIsRUFBOEM7QUFBQSxNQUFDLFFBQUEsRUFBUyxJQUFWO0tBQTlDLEVBRDhCO0VBQUEsQ0FBaEMsQ0F6REEsQ0FBQTtTQTZEQSxhQWhFaUc7QUFBQSxDQUFuRyxDQUFBLENBQUEiLCJzb3VyY2VzQ29udGVudCI6WyJkZWZpbmUgWydhbmd1bGFyanMnLCAnYW5ndWxhcnJvdXRlJywgJ2Jhc2VmaWxldXBsb2FkJywgJ3Nhbml0aXplJywgJ2FuZ2FuaW1hdGUnLCdmYmFzZScsICdhZmlyZSddLCAoYW5ndWxhciwgcm91dGUsIGJhc2VmaWxldXBsb2FkLCBzYW5pdGl6ZSwgYW5nYW5pbWF0ZSwgRmlyZWJhc2UsIGFmaXJlKSAtPlxuXG5cbiAgVGltZVNoZWV0QXBwID0gYW5ndWxhci5tb2R1bGUoJ3RpbWVTaGVldEFwcCcsIFsnbmdSb3V0ZScsICduYWlmLmJhc2U2NCcsICduZ1Nhbml0aXplJywgJ25nQW5pbWF0ZScsICdmaXJlYmFzZSddKS5jb25maWcgKFtcbiAgICAgICAgICAgICAgICAnJHJvdXRlUHJvdmlkZXInLFxuICAgICAgICAgICAgICAgICgkcm91dGVQcm92aWRlcikgLT5cblxuICAgICAgICAgICAgICAgICAgJHJvdXRlUHJvdmlkZXIud2hlbiAnLycsXG4jICAgICAgICAgICAgICAgICAgICB0ZW1wbGF0ZTogJzxkaXYgY2xhc3M9XCJyb3cgdGV4dC1jZW50ZXIgbmctY2xvYWtcIj48ZGl2IGNsYXNzPVwiY29sLW1kLTEyXCI+PC9kaXY+PGkgY2xhc3M9XCJpY29uLXNwaW41IGFuaW1hdGUtc3BpblwiPjwvaT5Mb2FkaW5nLi4uPC9kaXY+J1xuICAgICAgICAgICAgICAgICAgICB0ZW1wbGF0ZTogJzxkaXYgY2xhc3M9XCJyb3cgdGV4dC1jZW50ZXIgbmctY2xvYWtcIj48ZGl2IGNsYXNzPVwiY29sLW1kLTEyXCI+PC9kaXY+PGkgY2xhc3M9XCJcIj48L2k+VGhlIEFwcCBDYW52YXM8L2Rpdj4nXG4gICAgICAgICAgICAgICAgICAgIGNvbnRyb2xsZXI6IChbXCIkbG9jYXRpb25cIiwgXCIkcm9vdFNjb3BlXCIsICgkbG9jYXRpb24sICRyb290U2NvcGUpIC0+XG4gICAgICAgICAgICAgICAgICAgICAgJGxvY2F0aW9uLnBhdGgoJHJvb3RTY29wZS5yb290UGF0aClcbiAgICAgICAgICAgICAgICAgICAgXSlcblxuICAgICAgICAgICAgICAgICAgJHJvdXRlUHJvdmlkZXIud2hlbiAnL2Rhc2hib2FyZCcsXG4gICAgICAgICAgICAgICAgICAgIHRlbXBsYXRlVXJsOiBcIi9qYXZhc2NyaXB0cy9hcHAvdGVtcGxhdGVzL2Rhc2hib2FyZC5odG1sXCJcbiAgICAgICAgICAgICAgICAgICAgY29udHJvbGxlcjogJ0Rhc2hCb2FyZENvbnRyb2xsZXInXG5cbiAgICAgICAgICAgICAgIF0pXG5cbiAgVGltZVNoZWV0QXBwLnJ1biAoW1xuICAgIFwiJHJvb3RTY29wZVwiLCBcIiRsb2NhdGlvblwiLCBcIiR3aW5kb3dcIiwgXCJGaXJlYmFzZVNlcnZpY2VcIiwgXCIkcm91dGVcIiwgXCIkdGltZW91dFwiLFxuICAgICgkcm9vdFNjb3BlLCAkbG9jYXRpb24sICR3aW5kb3csIEZpcmViYXNlU2VydmljZSwgJHJvdXRlLCAkdGltZW91dCkgLT5cbiAgICAgICRyb290U2NvcGUubG9jYXRpb24gPSAkbG9jYXRpb25cbiAgICAgICRyb290U2NvcGUuYXV0aExvYWRlZCA9IGZhbHNlXG4gICAgICBhdXRoID0gRmlyZWJhc2VTZXJ2aWNlLnJvb3RSZWYuZ2V0QXV0aCgpXG4gICAgICAkcm9vdFNjb3BlLnJvb3RSZWYgPSBGaXJlYmFzZVNlcnZpY2Uucm9vdFJlZlxuXG4gICAgICAkcm9vdFNjb3BlLiRvbiAnJGxvY2F0aW9uQ2hhbmdlU3VjY2VzcycsIC0+XG4gICAgICAgICRyb290U2NvcGUubG9jYXRpb24gPSB3aW5kb3cubG9jYXRpb24ucGF0aG5hbWVcbiAgICAgICAgJHJvb3RTY29wZS5sb2NhdGlvbkhhc2ggPSB3aW5kb3cubG9jYXRpb24uaGFzaFxuXG4gICAgICAkcm9vdFNjb3BlLmRpc2FibGVNb2RhbCA9ICgpIC0+XG4gICAgICAgICRyb290U2NvcGUuZW5hYmxlTW9kYWwgPSBmYWxzZVxuXG5cbiAgICAgICRyb290U2NvcGUuY29udmVydFRvU2x1ZyA9ICh0ZXh0KSAtPlxuICAgICAgICB0ZXh0LnRvTG93ZXJDYXNlKCkucmVwbGFjZSgvW15cXHcgXSsvZywnJykucmVwbGFjZSgvW15cXHctXSsvZywnLScpXG5cblxuICAgICAgaWYgYXV0aFxuICAgICAgICAkcm9vdFNjb3BlLmN1cnJlbnRVaWQgPSBhdXRoLnVpZFxuXG5cbiAgICAgICAgJHJvb3RTY29wZS5yb290UmVmLmNoaWxkKFwidXNlcnMvI3thdXRoLnVpZH0vYmFzaWNcIikub25jZSBcInZhbHVlXCIsIChzbmFwKSAtPlxuXG4gICAgICAgICAgJHJvb3RTY29wZS4kYXBwbHkgLT5cbiAgICAgICAgICAgICRyb290U2NvcGUudXNlckJhc2ljID0gc25hcC52YWwoKVxuICAgICAgICAgICAgJHJvb3RTY29wZS5jdXJyZW50VXNlclJlZiA9ICRyb290U2NvcGUucm9vdFJlZi5jaGlsZChcInVzZXJzLyN7YXV0aC51aWR9XCIpXG4gICAgICAgICAgICAkcm9vdFNjb3BlLmF1dGhMb2FkZWQgPSB0cnVlXG5cbiAgICAgICAgJGxvY2F0aW9uLnBhdGgoJy9kYXNoYm9hcmQnKVxuXG4gICAgICBlbHNlXG4gICAgICAgIHdpbmRvdy5sb2NhdGlvbiA9ICcvc2lnbi1pbidcblxuICBdKVxuXG5cblxuICBhbmd1bGFyLmVsZW1lbnQoZG9jdW1lbnQpLnJlYWR5IC0+XG4gICAgYW5ndWxhci5ib290c3RyYXAgZG9jdW1lbnQsIFsndGltZVNoZWV0QXBwJ10sIHtzdHJpY3REaTp0cnVlfVxuXG5cbiAgVGltZVNoZWV0QXBwIl19
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9hcHAvYmFzZS5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi9Vc2Vycy9rcmlzaG5hcm9raGFsZS9jb2RlL2xldmVsL2xldmVsL3RpbWVzaGVldGFwcC9hc3NldHMvamF2YXNjcmlwdHMvYXBwL2Jhc2UuY29mZmVlIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBLE1BQUEsQ0FBTyxDQUFFLFdBQUYsRUFBZSxjQUFmLEVBQStCLGdCQUEvQixFQUFpRCxVQUFqRCxFQUE2RCxZQUE3RCxFQUEwRSxPQUExRSxFQUFtRixPQUFuRixFQUE0RixRQUE1RixDQUFQLEVBQTZHLFNBQUMsT0FBRCxFQUFVLEtBQVYsRUFBaUIsY0FBakIsRUFBaUMsUUFBakMsRUFBMkMsVUFBM0MsRUFBdUQsUUFBdkQsRUFBaUUsS0FBakUsR0FBQTtBQUczRyxNQUFBLFlBQUE7QUFBQSxFQUFBLFlBQUEsR0FBZSxPQUFPLENBQUMsTUFBUixDQUFnQixjQUFoQixFQUErQixDQUFFLFNBQUYsRUFBYSxhQUFiLEVBQTRCLFlBQTVCLEVBQTBDLFdBQTFDLEVBQXVELFVBQXZELEVBQW1FLGNBQW5FLENBQS9CLENBQWlILENBQUMsTUFBbEgsQ0FBMEg7SUFDMUgsZ0JBRDBILEVBRTNILFNBQUMsY0FBRCxHQUFBO0FBRUUsTUFBQSxjQUFjLENBQUMsSUFBZixDQUFxQixHQUFyQixFQUVFO0FBQUEsUUFBQSxRQUFBLEVBQVcseUdBQVg7QUFBQSxRQUNBLFVBQUEsRUFBYTtVQUFFLFdBQUYsRUFBZSxZQUFmLEVBQTRCLFNBQUMsU0FBRCxFQUFZLFVBQVosR0FBQTttQkFDdkMsU0FBUyxDQUFDLElBQVYsQ0FBZSxVQUFVLENBQUMsUUFBMUIsRUFEdUM7VUFBQSxDQUE1QjtTQURiO09BRkYsQ0FBQSxDQUFBO2FBT0EsY0FBYyxDQUFDLElBQWYsQ0FBcUIsWUFBckIs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dXRlJywgJ2Jhc2VmaWxldXBsb2FkJywgJ3Nhbml0aXplJywgJ2FuZ2FuaW1hdGUnLCdmYmFzZScsICdhZmlyZScsICd1aWJvb3QnXSwgKGFuZ3VsYXIsIHJvdXRlLCBiYXNlZmlsZXVwbG9hZCwgc2FuaXRpemUsIGFuZ2FuaW1hdGUsIEZpcmViYXNlLCBhZmlyZSkgLT5cblxuXG4gIFRpbWVTaGVldEFwcCA9IGFuZ3VsYXIubW9kdWxlKCd0aW1lU2hlZXRBcHAnLCBbJ25nUm91dGUnLCAnbmFpZi5iYXNlNjQnLCAnbmdTYW5pdGl6ZScsICduZ0FuaW1hdGUnLCAnZmlyZWJhc2UnLCAndWkuYm9vdHN0cmFwJ10pLmNvbmZpZyAoW1xuICAgICAgICAgICAgICAgICckcm91dGVQcm92aWRlcicsXG4gICAgICAgICAgICAgICAgKCRyb3V0ZVByb3ZpZGVyKSAtPlxuXG4gICAgICAgICAgICAgICAgICAkcm91dGVQcm92aWRlci53aGVuICcvJyxcbiMgICAgICAgICAgICAgICAgICAgIHRlbXBsYXRlOiAnPGRpdiBjbGFzcz1cInJvdyB0ZXh0LWNlbnRlciBuZy1jbG9ha1wiPjxkaXYgY2xhc3M9XCJjb2wtbWQtMTJcIj48L2Rpdj48aSBjbGFzcz1cImljb24tc3BpbjUgYW5pbWF0ZS1zcGluXCI+PC9pPkxvYWRpbmcuLi48L2Rpdj4nXG4gICAgICAgICAgICAgICAgICAgIHRlbXBsYXRlOiAnPGRpdiBjbGFzcz1cInJvdyB0ZXh0LWNlbnRlciBuZy1jbG9ha1wiPjxkaXYgY2xhc3M9XCJjb2wtbWQtMTJcIj48L2Rpdj48aSBjbGFzcz1cIlwiPjwvaT5UaGUgQXBwIENhbnZhczwvZGl2PidcbiAgICAgICAgICAgICAgICAgICAgY29udHJvbGxlcjogKFtcIiRsb2NhdGlvblwiLCBcIiRyb290U2NvcGVcIiwgKCRsb2NhdGlvbiwgJHJvb3RTY29wZSkgLT5cbiAgICAgICAgICAgICAgICAgICAgICAkbG9jYXRpb24ucGF0aCgkcm9vdFNjb3BlLnJvb3RQYXRoKVxuICAgICAgICAgICAgICAgICAgICBdKVxuXG4gICAgICAgICAgICAgICAgICAkcm91dGVQcm92aWRlci53aGVuICcvZGFzaGJvYXJkJyxcbiAgICAgICAgICAgICAgICAgICAgdGVtcGxhdGVVcmw6IFwiL2phdmFzY3JpcHRzL2FwcC90ZW1wbGF0ZXMvZGFzaGJvYXJkLmh0bWxcIlxuICAgICAgICAgICAgICAgICAgICBjb250cm9sbGVyOiAnRGFzaEJvYXJkQ29udHJvbGxlcidcblxuICAgICAgICAgICAgICAgXSlcblxuICBUaW1lU2hlZXRBcHAucnVuIChbXG4gICAgXCIkcm9vdFNjb3BlXCIsIFwiJGxvY2F0aW9uXCIsIFwiJHdpbmRvd1wiLCBcIkZpcmViYXNlU2VydmljZVwiLCBcIiRyb3V0ZVwiLCBcIiR0aW1lb3V0XCIsXG4gICAgKCRyb290U2NvcGUsICRsb2NhdGlvbiwgJHdpbmRvdywgRmlyZWJhc2VTZXJ2aWNlLCAkcm91dGUsICR0aW1lb3V0KSAtPlxuICAgICAgJHJvb3RTY29wZS5sb2NhdGlvbiA9ICRsb2NhdGlvblxuICAgICAgJHJvb3RTY29wZS5hdXRoTG9hZGVkID0gZmFsc2VcbiAgICAgIGF1dGggPSBGaXJlYmFzZVNlcnZpY2Uucm9vdFJlZi5nZXRBdXRoKClcbiAgICAgICRyb290U2NvcGUucm9vdFJlZiA9IEZpcmViYXNlU2VydmljZS5yb290UmVmXG5cbiAgICAgICRyb290U2NvcGUuJG9uICckbG9jYXRpb25DaGFuZ2VTdWNjZXNzJywgLT5cbiAgICAgICAgJHJvb3RTY29wZS5sb2NhdGlvbiA9IHdpbmRvdy5sb2NhdGlvbi5wYXRobmFtZVxuICAgICAgICAkcm9vdFNjb3BlLmxvY2F0aW9uSGFzaCA9IHdpbmRvdy5sb2NhdGlvbi5oYXNoXG5cbiAgICAgICRyb290U2NvcGUuZGlzYWJsZU1vZGFsID0gKCkgLT5cbiAgICAgICAgJHJvb3RTY29wZS5lbmFibGVNb2RhbCA9IGZhbHNlXG5cblxuICAgICAgJHJvb3RTY29wZS5jb252ZXJ0VG9TbHVnID0gKHRleHQpIC0+XG4gICAgICAgIHRleHQudG9Mb3dlckNhc2UoKS5yZXBsYWNlKC9bXlxcdyBdKy9nLCcnKS5yZXBsYWNlKC9bXlxcdy1dKy9nLCctJylcblxuXG4gICAgICBpZiBhdXRoXG4gICAgICAgICRyb290U2NvcGUuY3VycmVudFVpZCA9IGF1dGgudWlkXG5cblxuICAgICAgICAkcm9vdFNjb3BlLnJvb3RSZWYuY2hpbGQoXCJ1c2Vycy8je2F1dGgudWlkfS9iYXNpY1wiKS5vbmNlIFwidmFsdWVcIiwgKHNuYXApIC0+XG5cbiAgICAgICAgICAkcm9vdFNjb3BlLiRhcHBseSAtPlxuICAgICAgICAgICAgJHJvb3RTY29wZS51c2VyQmFzaWMgPSBzbmFwLnZhbCgpXG4gICAgICAgICAgICAkcm9vdFNjb3BlLmN1cnJlbnRVc2VyUmVmID0gJHJvb3RTY29wZS5yb290UmVmLmNoaWxkKFwidXNlcnMvI3thdXRoLnVpZH1cIilcbiAgICAgICAgICAgICRyb290U2NvcGUuYXV0aExvYWRlZCA9IHRydWVcblxuICAgICAgICAkbG9jYXRpb24ucGF0aCgnL2Rhc2hib2FyZCcpXG5cbiAgICAgIGVsc2VcbiAgICAgICAgd2luZG93LmxvY2F0aW9uID0gJy9zaWduLWluJ1xuXG4gIF0pXG5cblxuXG4gIGFuZ3VsYXIuZWxlbWVudChkb2N1bWVudCkucmVhZHkgLT5cbiAgICBhbmd1bGFyLmJvb3RzdHJhcCBkb2N1bWVudCwgWyd0aW1lU2hlZXRBcHAnXSwge3N0cmljdERpOnRydWV9XG5cblxuICBUaW1lU2hlZXRBcHAiXX0=
 ;
 define('app/controllers/nav_controller',['app/base', 'angularjs', 'fbase'], function(TimeSheetApp) {
   var NavBarController;
@@ -5805,19 +10642,169 @@ define('app/controllers/nav_controller',['app/base', 'angularjs', 'fbase'], func
 define('app/controllers/dashboard_controller',['app/base', 'angularjs', 'fbase'], function(TimeSheetApp) {
   var DashBoardController;
   DashBoardController = (function() {
-    function DashBoardController($scope, $rootScope, $sce, FirebaseService, $window) {}
+    function DashBoardController($scope, $rootScope, $sce, FirebaseService, $window, $firebaseObject, $firebaseArray) {
+      $scope.startDate = moment().date(5).startOf('day');
+      $scope.endDate = moment().date(5).endOf('day').add(13, 'd');
+      $scope.formattedStart = $scope.startDate.format('M/D/YY');
+      $scope.formattedEnd = $scope.endDate.format('M/D/YY');
+      $scope.lessonModel = {
+        student: "",
+        length: "",
+        notes: ""
+      };
+      FirebaseService.rootRef.child('students').once("value", function(snap) {
+        var k, students, v, _ref;
+        students = [];
+        _ref = snap.val();
+        for (k in _ref) {
+          v = _ref[k];
+          students.push({
+            id: k,
+            name: v.firstName + " " + v.lastName
+          });
+        }
+        return $scope.$apply(function() {
+          return $scope.students = students;
+        });
+      });
+      $rootScope.$watch('userBasic', function(newVal, oldVal) {
+        if ($rootScope.userBasic) {
+          if (!($rootScope.userBasic.manager || $rootScope.userBasic.mentor)) {
+            return $rootScope.roleNotSet = true;
+          } else {
+            return $scope.loadDashboard();
+          }
+        }
+      });
+      $scope.loadDashboard = function() {
+        var datepickerSelector, endM, maxDate, minDate, startM, str;
+        if ($rootScope.userBasic.manager) {
+          $scope.selectedTab = 'TIMESHEETS';
+          $scope.currentDash = 'Manager';
+          return $scope.mentors = $firebaseObject(FirebaseService.rootRef.child('users').startAt('manager').endAt('manager'));
+        } else {
+          $scope.currentDash = 'Mentor';
+          startM = moment($scope.formattedStart, 'M/D/YY');
+          endM = moment($scope.formattedEnd, 'M/D/YY');
+          str = (moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")) + "-" + (moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY"));
+          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/" + str + "/lessons"));
+          $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/" + str + "/submitted"));
+          minDate = new Date(startM.year(), startM.month(), startM.date());
+          maxDate = new Date(endM.year(), endM.month(), endM.date());
+          datepickerSelector = $('#datepicker-01');
+          datepickerSelector.datepicker({
+            showOtherMonths: true,
+            selectOtherMonths: true,
+            minDate: minDate,
+            maxDate: maxDate,
+            dateFormat: 'm/d/yy',
+            yearRange: '-1:+1'
+          }).prev('.input-group-btn').on('click', function(e) {
+            e && e.preventDefault();
+            datepickerSelector.focus();
+          });
+          $.extend($.datepicker, {
+            _checkOffset: function(inst, offset, isFixed) {
+              return offset;
+            }
+          });
+          return datepickerSelector.datepicker('widget').css({
+            'margin-left': -datepickerSelector.prev('.input-group-btn').find('.btn').outerWidth() + 3
+          });
+        }
+      };
+      $scope.reRenderDatePicker = function() {
+        var endM, maxDate, minDate, startM;
+        startM = moment($scope.formattedStart, 'M/D/YY');
+        endM = moment($scope.formattedEnd, 'M/D/YY');
+        minDate = new Date(startM.year(), startM.month(), startM.date());
+        maxDate = new Date(endM.year(), endM.month(), endM.date());
+        $('#datepicker-01').datepicker("option", "maxDate", maxDate);
+        $('#datepicker-01').datepicker("option", "minDate", minDate);
+      };
+      $scope.openTimesheetsTab = function() {
+        return $scope.selectedTab = 'TIMESHEETS';
+      };
+      $scope.formatLabel = function(item) {
+        if (item) {
+          return item.name;
+        }
+      };
+      $scope.openInvoicesTab = function() {
+        return $scope.selectedTab = 'INVOICES';
+      };
+      $scope.nextPeriod = function() {
+        var oldEndDate, str;
+        oldEndDate = $scope.endDate;
+        $scope.startDate = oldEndDate;
+        $scope.formattedStart = $scope.startDate.format('M/D/YY');
+        $scope.endDate = $scope.startDate.add(13, 'd');
+        $scope.formattedEnd = $scope.endDate.format('M/D/YY');
+        $scope.reRenderDatePicker();
+        if ($scope.currentDash === 'Mentor') {
+          if ($scope.currentTimeSheet) {
+            $scope.currentTimeSheet.$destroy();
+          }
+          str = (moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")) + "-" + (moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY"));
+          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/" + str + "/lessons"));
+          return $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/" + str + "/submitted"));
+        }
+      };
+      $scope.prevPeriod = function() {
+        var str;
+        $scope.startDate = moment($scope.formattedStart, 'M/D/YY').subtract(13, 'd');
+        $scope.formattedStart = $scope.startDate.format('M/D/YY');
+        $scope.endDate = moment($scope.formattedEnd, 'M/D/YY').subtract(13, 'd');
+        $scope.formattedEnd = $scope.endDate.format('M/D/YY');
+        $scope.reRenderDatePicker();
+        if ($scope.currentDash === 'Mentor') {
+          if ($scope.currentTimeSheet) {
+            $scope.currentTimeSheet.$destroy();
+          }
+          str = (moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")) + "-" + (moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY"));
+          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/" + str + "/lessons"));
+          return $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/" + str + "/submitted"));
+        }
+      };
+      $scope.addLesson = function() {
+        var currentTimeSheet;
+        if ($scope.lessonModel.student.id && $scope.lessonModel.length.length > 0 && $('#datepicker-01').val().length > 0) {
+          currentTimeSheet = (moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")) + "-" + (moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY"));
+          $scope.lessonModel.date = moment($('#datepicker-01').val(), 'M/D/YY').format("MMMM Do YYYY");
+          $rootScope.currentUserRef.child("timesheets/" + currentTimeSheet + "/lessons").push().set($scope.lessonModel);
+          return $scope.lessonModel = {
+            student: "",
+            length: "",
+            notes: ""
+          };
+        }
+      };
+      $scope.removeLesson = function(id) {
+        var str;
+        str = (moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")) + "-" + (moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY"));
+        return $rootScope.currentUserRef.child("timesheets/" + str + "/lessons/" + id).set(null);
+      };
+      $scope.submitTimeSheet = function() {
+        var result, str;
+        result = confirm("Are you sure?");
+        if (result) {
+          str = (moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")) + "-" + (moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY"));
+          return $rootScope.currentUserRef.child("timesheets/" + str + "/submitted").set(true);
+        }
+      };
+    }
 
     return DashBoardController;
 
   })();
-  DashBoardController.$inject = ["$scope", "$rootScope", "$sce", "FirebaseService", "$window"];
+  DashBoardController.$inject = ["$scope", "$rootScope", "$sce", "FirebaseService", "$window", "$firebaseObject", "$firebaseArray"];
   TimeSheetApp.controller('DashBoardController', DashBoardController);
   return DashBoardController;
 });
 
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9hcHAvY29udHJvbGxlcnMvZGFzaGJvYXJkX2NvbnRyb2xsZXIuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIvVXNlcnMva3Jpc2huYXJva2hhbGUvY29kZS9sZXZlbC9sZXZlbC90aW1lc2hlZXRhcHAvYXNzZXRzL2phdmFzY3JpcHRzL2FwcC9jb250cm9sbGVycy9kYXNoYm9hcmRfY29udHJvbGxlci5jb2ZmZWUiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsTUFBQSxDQUFPLENBQUUsVUFBRixFQUFhLFdBQWIsRUFBMEIsT0FBMUIsQ0FBUCxFQUEwQyxTQUFDLFlBQUQsR0FBQTtBQUV4QyxNQUFBLG1CQUFBO0FBQUEsRUFBTTtBQUVTLElBQUEsNkJBQUMsTUFBRCxFQUFTLFVBQVQsRUFBcUIsSUFBckIsRUFBMkIsZUFBM0IsRUFBNEMsT0FBNUMsR0FBQSxDQUFiOzsrQkFBQTs7TUFGRixDQUFBO0FBQUEsRUFLQSxtQkFBbUIsQ0FBQyxPQUFwQixHQUE4QixDQUFFLFFBQUYsRUFBWSxZQUFaLEVBQTBCLE1BQTFCLEVBQWtDLGlCQUFsQyxFQUFxRCxTQUFyRCxDQUw5QixDQUFBO0FBQUEsRUFPQSxZQUFZLENBQUMsVUFBYixDQUF5QixxQkFBekIsRUFBK0MsbUJBQS9DLENBUEEsQ0FBQTtTQVNBLG9CQVh3QztBQUFBLENBQTFDLENBQUEsQ0FBQSIsInNvdXJjZXNDb250ZW50IjpbImRlZmluZSBbJ2FwcC9iYXNlJywnYW5ndWxhcmpzJywgJ2ZiYXNlJ10sIChUaW1lU2hlZXRBcHApIC0+XG5cbiAgY2xhc3MgRGFzaEJvYXJkQ29udHJvbGxlclxuXG4gICAgY29uc3RydWN0b3I6ICgkc2NvcGUsICRyb290U2NvcGUsICRzY2UsIEZpcmViYXNlU2VydmljZSwgJHdpbmRvdykgLT5cblxuXG4gIERhc2hCb2FyZENvbnRyb2xsZXIuJGluamVjdCA9IFtcIiRzY29wZVwiLCBcIiRyb290U2NvcGVcIiwgXCIkc2NlXCIsIFwiRmlyZWJhc2VTZXJ2aWNlXCIsIFwiJHdpbmRvd1wiXVxuXG4gIFRpbWVTaGVldEFwcC5jb250cm9sbGVyICdEYXNoQm9hcmRDb250cm9sbGVyJywgRGFzaEJvYXJkQ29udHJvbGxlclxuXG4gIERhc2hCb2FyZENvbnRyb2xsZXIiXX0=
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9hcHAvY29udHJvbGxlcnMvZGFzaGJvYXJkX2NvbnRyb2xsZXIuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIvVXNlcnMva3Jpc2huYXJva2hhbGUvY29kZS9sZXZlbC9sZXZlbC90aW1lc2hlZXRhcHAvYXNzZXRzL2phdmFzY3JpcHRzL2FwcC9jb250cm9sbGVycy9kYXNoYm9hcmRfY29udHJvbGxlci5jb2ZmZWUiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQ0EsTUFBQSxDQUFPLENBQUUsVUFBRixFQUFhLFdBQWIsRUFBMEIsT0FBMUIsQ0FBUCxFQUEwQyxTQUFDLFlBQUQsR0FBQTtBQUV4QyxNQUFBLG1CQUFBO0FBQUEsRUFBTTtBQUVTLElBQUEsNkJBQUMsTUFBRCxFQUFTLFVBQVQsRUFBcUIsSUFBckIsRUFBMkIsZUFBM0IsRUFBNEMsT0FBNUMsRUFBcUQsZUFBckQsRUFBc0UsY0FBdEUsR0FBQTtBQUVYLE1BQUEsTUFBTSxDQUFDLFNBQVAsR0FBbUIsTUFBQSxDQUFBLENBQVEsQ0FBQyxJQUFULENBQWMsQ0FBZCxDQUFnQixDQUFDLE9BQWpCLENBQTBCLEtBQTFCLENBQW5CLENBQUE7QUFBQSxNQUNBLE1BQU0sQ0FBQyxPQUFQLEdBQWlCLE1BQUEsQ0FBQSxDQUFRLENBQUMsSUFBVCxDQUFjLENBQWQsQ0FBZ0IsQ0FBQyxLQUFqQixDQUF3QixLQUF4QixDQUE2QixDQUFDLEdBQTlCLENBQWtDLEVBQWxDLEVBQXVDLEdBQXZDLENBRGpCLENBQUE7QUFBQSxNQUdBLE1BQU0sQ0FBQyxjQUFQLEdBQXdCLE1BQU0sQ0FBQyxTQUFTLENBQUMsTUFBakIsQ0FBeUIsUUFBekIsQ0FIeEIsQ0FBQTtBQUFBLE1BSUEsTUFBTSxDQUFDLFlBQVAsR0FBc0IsTUFBTSxDQUFDLE9BQU8sQ0FBQyxNQUFmLENBQXVCLFFBQXZCLENB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dEIsQ0FBQTtBQUFBLE1BaUlBLE1BQU0sQ0FBQyxlQUFQLEdBQXlCLFNBQUEsR0FBQTtBQUN2QixZQUFBLFdBQUE7QUFBQSxRQUFBLE1BQUEsR0FBUyxPQUFBLENBQVMsZUFBVCxDQUFULENBQUE7QUFDQSxRQUFBLElBQUcsTUFBSDtBQUNFLFVBQUEsR0FBQSxHQUFRLENBQUMsTUFBQSxDQUFPLE1BQU0sQ0FBQyxjQUFkLEVBQStCLFFBQS9CLENBQXVDLENBQUMsTUFBeEMsQ0FBZ0QsY0FBaEQsQ0FBRCxDQUFBLEdBQWdFLEdBQWhFLEdBQWtFLENBQUMsTUFBQSxDQUFPLE1BQU0sQ0FBQyxZQUFkLEVBQTZCLFFBQTdCLENBQXFDLENBQUMsTUFBdEMsQ0FBOEMsY0FBOUMsQ0FBRCxDQUExRSxDQUFBO2lCQUNBLFVBQVUsQ0FBQyxjQUFjLENBQUMsS0FBMUIsQ0FBaUMsYUFBQSxHQUFhLEdBQWIsR0FBaUIsWUFBbEQsQ0FBOEQsQ0FBQyxHQUEvRCxDQUFtRSxJQUFuRSxFQUZGO1NBRnVCO01BQUEsQ0FqSXpCLENBRlc7SUFBQSxDQUFiOzsrQkFBQTs7TUFGRixDQUFBO0FBQUEsRUFpSkEsbUJBQW1CLENBQUMsT0FBcEIsR0FBOEIsQ0FBRSxRQUFGLEVBQVksWUFBWixFQUEwQixNQUExQixFQUFrQyxpQkFBbEMsRUFBcUQsU0FBckQsRUFBZ0UsaUJBQWhFLEVBQW1GLGdCQUFuRixDQWpKOUIsQ0FBQTtBQUFBLEVBbUpBLFlBQVksQ0FBQyxVQUFiLENBQXlCLHFCQUF6QixFQUErQyxtQkFBL0MsQ0FuSkEsQ0FBQTtTQXFKQSxvQkF2SndDO0FBQUEsQ0FBMUMsQ0FBQSxDQUFBIiwic291cmNlc0NvbnRlbnQiOlsiXG5kZWZpbmUgWydhcHAvYmFzZScsJ2FuZ3VsYXJqcycsICdmYmFzZSddLCAoVGltZVNoZWV0QXBwKSAtPlxuXG4gIGNsYXNzIERhc2hCb2FyZENvbnRyb2xsZXJcblxuICAgIGNvbnN0cnVjdG9yOiAoJHNjb3BlLCAkcm9vdFNjb3BlLCAkc2NlLCBGaXJlYmFzZVNlcnZpY2UsICR3aW5kb3csICRmaXJlYmFzZU9iamVjdCwgJGZpcmViYXNlQXJyYXkpIC0+XG5cbiAgICAgICRzY29wZS5zdGFydERhdGUgPSBtb21lbnQoKS5kYXRlKDUpLnN0YXJ0T2YoJ2RheScpXG4gICAgICAkc2NvcGUuZW5kRGF0ZSA9IG1vbWVudCgpLmRhdGUoNSkuZW5kT2YoJ2RheScpLmFkZCgxMywgJ2QnKVxuXG4gICAgICAkc2NvcGUuZm9ybWF0dGVkU3RhcnQgPSAkc2NvcGUuc3RhcnREYXRlLmZvcm1hdCgnTS9EL1lZJylcbiAgICAgICRzY29wZS5mb3JtYXR0ZWRFbmQgPSAkc2NvcGUuZW5kRGF0ZS5mb3JtYXQoJ00vRC9ZWScpXG5cblxuICAgICAgJHNjb3BlLmxlc3Nvbk1vZGVsID0ge3N0dWRlbnQ6IFwiXCIsIGxlbmd0aDogXCJcIiwgbm90ZXM6IFwiXCJ9XG5cbiAgICAgIEZpcmViYXNlU2VydmljZS5yb290UmVmLmNoaWxkKCdzdHVkZW50cycpLm9uY2UgXCJ2YWx1ZVwiLCAoc25hcCkgLT5cbiAgICAgICAgc3R1ZGVudHMgPSBbXVxuICAgICAgICBmb3Igayx2IG9mIHNuYXAudmFsKClcbiAgICAgICAgICBzdHVkZW50cy5wdXNoIHtpZDogaywgbmFtZTogXCIje3YuZmlyc3ROYW1lfSAje3YubGFzdE5hbWV9XCJ9XG5cbiAgICAgICAgJHNjb3BlLiRhcHBseSAtPlxuICAgICAgICAgICRzY29wZS5zdHVkZW50cyA9IHN0dWRlbnRzXG5cblxuICAgICAgJHJvb3RTY29wZS4kd2F0Y2ggJ3VzZXJCYXNpYycsIChuZXdWYWwsIG9sZFZhbCkgLT5cbiAgICAgICAgaWYgJHJvb3RTY29wZS51c2VyQmFzaWNcbiAgICAgICAgICB1bmxlc3MgJHJvb3RTY29wZS51c2VyQmFzaWMubWFuYWdlciB8fCAkcm9vdFNjb3BlLnVzZXJCYXNpYy5tZW50b3JcbiAgICAgICAgICAgICRyb290U2NvcGUucm9sZU5vdFNldCA9IHRydWVcbiAgICAgICAgICBlbHNlXG4gICAgICAgICAgICAkc2NvcGUubG9hZERhc2hib2FyZCgpXG5cblxuXG5cblxuICAgICAgJHNjb3BlLmxvYWREYXNoYm9hcmQgPSAoKSAtPlxuICAgICAgICBpZiAkcm9vdFNjb3BlLnVzZXJCYXNpYy5tYW5hZ2VyXG4gICAgICAgICAgJHNjb3BlLnNlbGVjdGVkVGFiID0gJ1RJTUVTSEVFVFMnXG4gICAgICAgICAgJHNjb3BlLmN1cnJlbnREYXNoID0gJ01hbmFnZXInXG4gICAgICAgICAgJHNjb3BlLm1lbnRvcnMgPSAkZmlyZWJhc2VPYmplY3QoRmlyZWJhc2VTZXJ2aWNlLnJvb3RSZWYuY2hpbGQoJ3VzZXJzJykuc3RhcnRBdCgnbWFuYWdlcicpLmVuZEF0KCdtYW5hZ2VyJykpXG4gICAgICAgIGVsc2VcbiAgICAgICAgICAkc2NvcGUuY3VycmVudERhc2ggPSAnTWVudG9yJ1xuXG4gICAgICAgICAgc3RhcnRNID0gbW9tZW50KCRzY29wZS5mb3JtYXR0ZWRTdGFydCwgJ00vRC9ZWScpXG4gICAgICAgICAgZW5kTSA9IG1vbWVudCgkc2NvcGUuZm9ybWF0dGVkRW5kLCAnTS9EL1lZJylcblxuICAgICAgICAgIHN0ciA9IFwiI3ttb21lbnQoJHNjb3BlLmZvcm1hdHRlZFN0YXJ0LCAnTS9EL1lZJykuZm9ybWF0KFwiTU1NTSBEbyBZWVlZXCIpfS0je21vbWVudCgkc2NvcGUuZm9ybWF0dGVkRW5kLCAnTS9EL1lZJykuZm9ybWF0KFwiTU1NTSBEbyBZWVlZXCIpfVwiXG4gICAgICAgICAgJHNjb3BlLmN1cnJlbnRUaW1lU2hlZXQgPSAkZmlyZWJhc2VPYmplY3QoJHJvb3RTY29wZS5jdXJyZW50VXNlclJlZi5jaGlsZChcInRpbWVzaGVldHMvI3tzdHJ9L2xlc3NvbnNcIikpXG4gICAgICAgICAgJHNjb3BlLmN1cnJlbnRUaW1lU2hlZXRTdWJtaXR0ZWQgPSAkZmlyZWJhc2VPYmplY3QoJHJvb3RTY29wZS5jdXJyZW50VXNlclJlZi5jaGlsZChcInRpbWVzaGVldHMvI3tzdHJ9L3N1Ym1pdHRlZFwiKSlcblxuICAgICAgICAgIG1pbkRhdGUgPSBuZXcgRGF0ZShzdGFydE0ueWVhcigpLCBzdGFydE0ubW9udGgoKSwgc3RhcnRNLmRhdGUoKSlcbiAgICAgICAgICBtYXhEYXRlID0gbmV3IERhdGUoZW5kTS55ZWFyKCksIGVuZE0ubW9udGgoKSwgZW5kTS5kYXRlKCkpXG5cbiAgICAgICAgICBkYXRlcGlja2VyU2VsZWN0b3IgPSAkKCcjZGF0ZXBpY2tlci0wMScpXG4gICAgICAgICAgZGF0ZXBpY2tlclNlbGVjdG9yLmRhdGVwaWNrZXIoXG4gICAgICAgICAgICBzaG93T3RoZXJNb250aHM6IHRydWVcbiAgICAgICAgICAgIHNlbGVjdE90aGVyTW9udGhzOiB0cnVlXG4gICAgICAgICAgICBtaW5EYXRlOiBtaW5EYXRlXG4gICAgICAgICAgICBtYXhEYXRlOiBtYXhEYXRlXG4gICAgICAgICAgICBkYXRlRm9ybWF0OiAnbS9kL3l5J1xuICAgICAgICAgICAgeWVhclJhbmdlOiAnLTE6KzEnKS5wcmV2KCcuaW5wdXQtZ3JvdXAtYnRuJykub24gJ2NsaWNrJywgKGUpIC0+XG4gICAgICAgICAgICAgIGUgYW5kIGUucHJldmVudERlZmF1bHQoKVxuICAgICAgICAgICAgICBkYXRlcGlja2VyU2VsZWN0b3IuZm9jdXMoKVxuICAgICAgICAgICAgICByZXR1cm5cbiAgICAgICAgICAkLmV4dGVuZCAkLmRhdGVwaWNrZXIsIF9jaGVja09mZnNldDogKGluc3QsIG9mZnNldCwgaXNGaXhlZCkgLT5cbiAgICAgICAgICAgIG9mZnNldFxuICAgICAgICAgIGRhdGVwaWNrZXJTZWxlY3Rvci5kYXRlcGlja2VyKCd3aWRnZXQnKS5jc3MgJ21hcmdpbi1sZWZ0JzogLWRhdGVwaWNrZXJTZWxlY3Rvci5wcmV2KCcuaW5wdXQtZ3JvdXAtYnRuJykuZmluZCgnLmJ0bicpLm91dGVyV2lkdGgoKSArIDNcblxuICAgICAgJHNjb3BlLnJlUmVuZGVyRGF0ZVBpY2tlciA9ICgpIC0+XG4gICAgICAgIHN0YXJ0TSA9IG1vbWVudCgkc2NvcGUuZm9ybWF0dGVkU3RhcnQsICdNL0QvWVknKVxuICAgICAgICBlbmRNID0gbW9tZW50KCRzY29wZS5mb3JtYXR0ZWRFbmQsICdNL0QvWVknKVxuXG4gICAgICAgIG1pbkRhdGUgPSBuZXcgRGF0ZShzdGFydE0ueWVhcigpLCBzdGFydE0ubW9udGgoKSwgc3RhcnRNLmRhdGUoKSlcbiAgICAgICAgbWF4RGF0ZSA9IG5ldyBEYXRlKGVuZE0ueWVhcigpLCBlbmRNLm1vbnRoKCksIGVuZE0uZGF0ZSgpKVxuICAgICAgICAkKCcjZGF0ZXBpY2tlci0wMScpLmRhdGVwaWNrZXIoIFwib3B0aW9uXCIsIFwibWF4RGF0ZVwiLCBtYXhEYXRlIClcbiAgICAgICAgJCgnI2RhdGVwaWNrZXItMDEnKS5kYXRlcGlja2VyKCBcIm9wdGlvblwiLCBcIm1pbkRhdGVcIiwgbWluRGF0ZSApXG4gICAgICAgIHJldHVyblxuXG5cblxuICAgICAgJHNjb3BlLm9wZW5UaW1lc2hlZXRzVGFiID0gKCkgLT5cbiAgICAgICAgJHNjb3BlLnNlbGVjdGVkVGFiID0gJ1RJTUVTSEVFVFMnXG5cblxuICAgICAgJHNjb3BlLmZvcm1hdExhYmVsID0gKGl0ZW0pIC0+XG4gICAgICAgIGl0ZW0ubmFtZSBpZiBpdGVtXG5cblxuICAgICAgJHNjb3BlLm9wZW5JbnZvaWNlc1RhYiA9ICgpIC0+XG4gICAgICAgICRzY29wZS5zZWxlY3RlZFRhYiA9ICdJTlZPSUNFUydcblxuXG4gICAgICAkc2NvcGUubmV4dFBlcmlvZCA9ICgpIC0+XG4gICAgICAgIG9sZEVuZERhdGUgPSAkc2NvcGUuZW5kRGF0ZVxuICAgICAgICAkc2NvcGUuc3RhcnREYXRlID0gb2xkRW5kRGF0ZVxuICAgICAgICAkc2NvcGUuZm9ybWF0dGVkU3RhcnQgPSAkc2NvcGUuc3RhcnREYXRlLmZvcm1hdCgnTS9EL1lZJylcblxuICAgICAgICAkc2NvcGUuZW5kRGF0ZSA9ICRzY29wZS5zdGFydERhdGUuYWRkKDEzLCAnZCcpXG4gICAgICAgICRzY29wZS5mb3JtYXR0ZWRFbmQgPSAkc2NvcGUuZW5kRGF0ZS5mb3JtYXQoJ00vRC9ZWScpXG4gICAgICAgICRzY29wZS5yZVJlbmRlckRhdGVQaWNrZXIoKVxuXG4gICAgICAgIGlmICRzY29wZS5jdXJyZW50RGFzaCA9PSAnTWVudG9yJ1xuICAgICAgICAgICRzY29wZS5jdXJyZW50VGltZVNoZWV0LiRkZXN0cm95KCkgaWYgJHNjb3BlLmN1cnJlbnRUaW1lU2hlZXRcbiAgICAgICAgICBzdHIgPSBcIiN7bW9tZW50KCRzY29wZS5mb3JtYXR0ZWRTdGFydCwgJ00vRC9ZWScpLmZvcm1hdChcIk1NTU0gRG8gWVlZWVwiKX0tI3ttb21lbnQoJHNjb3BlLmZvcm1hdHRlZEVuZCwgJ00vRC9ZWScpLmZvcm1hdChcIk1NTU0gRG8gWVlZWVwiKX1cIlxuICAgICAgICAgICRzY29wZS5jdXJyZW50VGltZVNoZWV0ID0gJGZpcmViYXNlT2JqZWN0KCRyb290U2NvcGUuY3VycmVudFVzZXJSZWYuY2hpbGQoXCJ0aW1lc2hlZXRzLyN7c3RyfS9sZXNzb25zXCIpKVxuICAgICAgICAgICRzY29wZS5jdXJyZW50VGltZVNoZWV0U3VibWl0dGVkID0gJGZpcmViYXNlT2JqZWN0KCRyb290U2NvcGUuY3VycmVudFVzZXJSZWYuY2hpbGQoXCJ0aW1lc2hlZXRzLyN7c3RyfS9zdWJtaXR0ZWRcIikpXG5cblxuICAgICAgJHNjb3BlLnByZXZQZXJpb2QgPSAoKSAtPlxuICAgICAgICAkc2NvcGUuc3RhcnREYXRlID0gbW9tZW50KCRzY29wZS5mb3JtYXR0ZWRTdGFydCwgJ00vRC9ZWScpLnN1YnRyYWN0KDEzLCAnZCcpXG4gICAgICAgICRzY29wZS5mb3JtYXR0ZWRTdGFydCA9ICRzY29wZS5zdGFydERhdGUuZm9ybWF0KCdNL0QvWVknKVxuXG4gICAgICAgICRzY29wZS5lbmREYXRlID0gbW9tZW50KCRzY29wZS5mb3JtYXR0ZWRFbmQsICdNL0QvWVknKS5zdWJ0cmFjdCgxMywgJ2QnKVxuICAgICAgICAkc2NvcGUuZm9ybWF0dGVkRW5kID0gJHNjb3BlLmVuZERhdGUuZm9ybWF0KCdNL0QvWVknKVxuICAgICAgICAkc2NvcGUucmVSZW5kZXJEYXRlUGlja2VyKClcblxuICAgICAgICBpZiAkc2NvcGUuY3VycmVudERhc2ggPT0gJ01lbnRvcidcbiAgICAgICAgICAkc2NvcGUuY3VycmVudFRpbWVTaGVldC4kZGVzdHJveSgpIGlmICRzY29wZS5jdXJyZW50VGltZVNoZWV0XG4gICAgICAgICAgc3RyID0gXCIje21vbWVudCgkc2NvcGUuZm9ybWF0dGVkU3RhcnQsICdNL0QvWVknKS5mb3JtYXQoXCJNTU1NIERvIFlZWVlcIil9LSN7bW9tZW50KCRzY29wZS5mb3JtYXR0ZWRFbmQsICdNL0QvWVknKS5mb3JtYXQoXCJNTU1NIERvIFlZWVlcIil9XCJcbiAgICAgICAgICAkc2NvcGUuY3VycmVudFRpbWVTaGVldCA9ICRmaXJlYmFzZU9iamVjdCgkcm9vdFNjb3BlLmN1cnJlbnRVc2VyUmVmLmNoaWxkKFwidGltZXNoZWV0cy8je3N0cn0vbGVzc29uc1wiKSlcbiAgICAgICAgICAkc2NvcGUuY3VycmVudFRpbWVTaGVldFN1Ym1pdHRlZCA9ICRmaXJlYmFzZU9iamVjdCgkcm9vdFNjb3BlLmN1cnJlbnRVc2VyUmVmLmNoaWxkKFwidGltZXNoZWV0cy8je3N0cn0vc3VibWl0dGVkXCIpKVxuXG5cbiAgICAgICRzY29wZS5hZGRMZXNzb24gPSAoKSAtPlxuICAgICAgICBpZiAkc2NvcGUubGVzc29uTW9kZWwuc3R1ZGVudC5pZCBhbmQgJHNjb3BlLmxlc3Nvbk1vZGVsLmxlbmd0aC5sZW5ndGggPiAwIGFuZCAkKCcjZGF0ZXBpY2tlci0wMScpLnZhbCgpLmxlbmd0aCA+IDBcbiAgICAgICAgICBjdXJyZW50VGltZVNoZWV0ID0gXCIje21vbWVudCgkc2NvcGUuZm9ybWF0dGVkU3RhcnQsICdNL0QvWVknKS5mb3JtYXQoXCJNTU1NIERvIFlZWVlcIil9LSN7bW9tZW50KCRzY29wZS5mb3JtYXR0ZWRFbmQsICdNL0QvWVknKS5mb3JtYXQoXCJNTU1NIERvIFlZWVlcIil9XCJcbiAgICAgICAgICAkc2NvcGUubGVzc29uTW9kZWwuZGF0ZSA9IG1vbWVudCgkKCcjZGF0ZXBpY2tlci0wMScpLnZhbCgpLCAnTS9EL1lZJykuZm9ybWF0KFwiTU1NTSBEbyBZWVlZXCIpXG4gICAgICAgICAgJHJvb3RTY29wZS5jdXJyZW50VXNlclJlZi5jaGlsZChcInRpbWVzaGVldHMvI3tjdXJyZW50VGltZVNoZWV0fS9sZXNzb25zXCIpLnB1c2goKS5zZXQgJHNjb3BlLmxlc3Nvbk1vZGVsXG4gICAgICAgICAgJHNjb3BlLmxlc3Nvbk1vZGVsID0ge3N0dWRlbnQ6IFwiXCIsIGxlbmd0aDogXCJcIiwgbm90ZXM6IFwiXCJ9XG5cblxuICAgICAgJHNjb3BlLnJlbW92ZUxlc3NvbiA9IChpZCkgLT5cbiAgICAgICAgc3RyID0gXCIje21vbWVudCgkc2NvcGUuZm9ybWF0dGVkU3RhcnQsICdNL0QvWVknKS5mb3JtYXQoXCJNTU1NIERvIFlZWVlcIil9LSN7bW9tZW50KCRzY29wZS5mb3JtYXR0ZWRFbmQsICdNL0QvWVknKS5mb3JtYXQoXCJNTU1NIERvIFlZWVlcIil9XCJcbiAgICAgICAgJHJvb3RTY29wZS5jdXJyZW50VXNlclJlZi5jaGlsZChcInRpbWVzaGVldHMvI3tzdHJ9L2xlc3NvbnMvI3tpZH1cIikuc2V0IG51bGxcblxuICAgICAgJHNjb3BlLnN1Ym1pdFRpbWVTaGVldCA9ICgpIC0+XG4gICAgICAgIHJlc3VsdCA9IGNvbmZpcm0oXCJBcmUgeW91IHN1cmU/XCIpXG4gICAgICAgIGlmIHJlc3VsdFxuICAgICAgICAgIHN0ciA9IFwiI3ttb21lbnQoJHNjb3BlLmZvcm1hdHRlZFN0YXJ0LCAnTS9EL1lZJykuZm9ybWF0KFwiTU1NTSBEbyBZWVlZXCIpfS0je21vbWVudCgkc2NvcGUuZm9ybWF0dGVkRW5kLCAnTS9EL1lZJykuZm9ybWF0KFwiTU1NTSBEbyBZWVlZXCIpfVwiXG4gICAgICAgICAgJHJvb3RTY29wZS5jdXJyZW50VXNlclJlZi5jaGlsZChcInRpbWVzaGVldHMvI3tzdHJ9L3N1Ym1pdHRlZFwiKS5zZXQgdHJ1ZVxuXG5cblxuXG5cblxuXG4gIERhc2hCb2FyZENvbnRyb2xsZXIuJGluamVjdCA9IFtcIiRzY29wZVwiLCBcIiRyb290U2NvcGVcIiwgXCIkc2NlXCIsIFwiRmlyZWJhc2VTZXJ2aWNlXCIsIFwiJHdpbmRvd1wiLCBcIiRmaXJlYmFzZU9iamVjdFwiLCBcIiRmaXJlYmFzZUFycmF5XCJdXG5cbiAgVGltZVNoZWV0QXBwLmNvbnRyb2xsZXIgJ0Rhc2hCb2FyZENvbnRyb2xsZXInLCBEYXNoQm9hcmRDb250cm9sbGVyXG5cbiAgRGFzaEJvYXJkQ29udHJvbGxlciJdfQ==
 ;
-define('app/services/firebase_service',['app/base', 'fbase'], function(CampaignCtrlApp, Firebase) {
+define('app/services/firebase_service',['app/base', 'fbase'], function(TimeSheetApp, Firebase) {
   var FirebaseService;
   FirebaseService = (function() {
     function FirebaseService() {
@@ -5829,10 +10816,10 @@ define('app/services/firebase_service',['app/base', 'fbase'], function(CampaignC
 
   })();
   FirebaseService.$inject = [];
-  return CampaignCtrlApp.service("FirebaseService", FirebaseService);
+  return TimeSheetApp.service("FirebaseService", FirebaseService);
 });
 
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9hcHAvc2VydmljZXMvZmlyZWJhc2Vfc2VydmljZS5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi9Vc2Vycy9rcmlzaG5hcm9raGFsZS9jb2RlL2xldmVsL2xldmVsL3RpbWVzaGVldGFwcC9hc3NldHMvamF2YXNjcmlwdHMvYXBwL3NlcnZpY2VzL2ZpcmViYXNlX3NlcnZpY2UuY29mZmVlIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUNBLE1BQUEsQ0FBTyxDQUFFLFVBQUYsRUFBYyxPQUFkLENBQVAsRUFBOEIsU0FBQyxlQUFELEVBQWtCLFFBQWxCLEdBQUE7QUFHNUIsTUFBQSxlQUFBO0FBQUEsRUFBTTtBQUVRLElBQUEseUJBQUEsR0FBQTtBQUNWLE1BQUEsSUFBQyxDQUFBLE9BQUQsR0FBZSxJQUFBLFFBQUEsQ0FBUyxRQUFRLENBQUMsYUFBVCxDQUF3QixtQkFBeEIsQ0FBMkMsQ0FBQyxZQUE1QyxDQUEwRCxlQUExRCxDQUFULENBQWYsQ0FBQTtBQUFBLE1BQ0EsSUFBQyxDQUFBLFFBQUQsR0FBWSxJQUFDLENBQUEsT0FBTyxDQUFDLE9BQVQsQ0FBQSxDQURaLENBRFU7SUFBQSxDQUFaOzsyQkFBQTs7TUFGRixDQUFBO0FBQUEsRUFPQSxlQUFlLENBQUMsT0FBaEIsR0FBMEIsRUFQMUIsQ0FBQTtTQVFBLGVBQWUsQ0FBQyxPQUFoQixDQUF5QixpQkFBekIsRUFBMkMsZUFBM0MsRUFYNEI7QUFBQSxDQUE5QixDQUFBLENBQUEiLCJzb3VyY2VzQ29udGVudCI6WyJcbmRlZmluZSBbJ2FwcC9iYXNlJywgJ2ZiYXNlJ10sIChDYW1wYWlnbkN0cmxBcHAsIEZpcmViYXNlKSAtPlxuXG5cbiAgY2xhc3MgRmlyZWJhc2VTZXJ2aWNlXG5cbiAgICBjb25zdHJ1Y3RvcjooKSAtPlxuICAgICAgQHJvb3RSZWYgPSBuZXcgRmlyZWJhc2UoZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLmN1c3RvbS1jb250YWluZXInKS5nZXRBdHRyaWJ1dGUoJ2RhdGEtcm9vdC11cmwnKSlcbiAgICAgIEBhdXRoRGF0YSA9IEByb290UmVmLmdldEF1dGgoKVxuXG5cbiAgRmlyZWJhc2VTZXJ2aWNlLiRpbmplY3QgPSBbXVxuICBDYW1wYWlnbkN0cmxBcHAuc2VydmljZSBcIkZpcmViYXNlU2VydmljZVwiLCBGaXJlYmFzZVNlcnZpY2UiXX0=
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9hcHAvc2VydmljZXMvZmlyZWJhc2Vfc2VydmljZS5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi9Vc2Vycy9rcmlzaG5hcm9raGFsZS9jb2RlL2xldmVsL2xldmVsL3RpbWVzaGVldGFwcC9hc3NldHMvamF2YXNjcmlwdHMvYXBwL3NlcnZpY2VzL2ZpcmViYXNlX3NlcnZpY2UuY29mZmVlIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUNBLE1BQUEsQ0FBTyxDQUFFLFVBQUYsRUFBYyxPQUFkLENBQVAsRUFBOEIsU0FBQyxZQUFELEVBQWUsUUFBZixHQUFBO0FBRzVCLE1BQUEsZUFBQTtBQUFBLEVBQU07QUFFUSxJQUFBLHlCQUFBLEdBQUE7QUFDVixNQUFBLElBQUMsQ0FBQSxPQUFELEdBQWUsSUFBQSxRQUFBLENBQVMsUUFBUSxDQUFDLGFBQVQsQ0FBd0IsbUJBQXhCLENBQTJDLENBQUMsWUFBNUMsQ0FBMEQsZUFBMUQsQ0FBVCxDQUFmLENBQUE7QUFBQSxNQUNBLElBQUMsQ0FBQSxRQUFELEdBQVksSUFBQyxDQUFBLE9BQU8sQ0FBQyxPQUFULENBQUEsQ0FEWixDQURVO0lBQUEsQ0FBWjs7MkJBQUE7O01BRkYsQ0FBQTtBQUFBLEVBT0EsZUFBZSxDQUFDLE9BQWhCLEdBQTBCLEVBUDFCLENBQUE7U0FRQSxZQUFZLENBQUMsT0FBYixDQUFzQixpQkFBdEIsRUFBd0MsZUFBeEMsRUFYNEI7QUFBQSxDQUE5QixDQUFBLENBQUEiLCJzb3VyY2VzQ29udGVudCI6WyJcbmRlZmluZSBbJ2FwcC9iYXNlJywgJ2ZiYXNlJ10sIChUaW1lU2hlZXRBcHAsIEZpcmViYXNlKSAtPlxuXG5cbiAgY2xhc3MgRmlyZWJhc2VTZXJ2aWNlXG5cbiAgICBjb25zdHJ1Y3RvcjooKSAtPlxuICAgICAgQHJvb3RSZWYgPSBuZXcgRmlyZWJhc2UoZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLmN1c3RvbS1jb250YWluZXInKS5nZXRBdHRyaWJ1dGUoJ2RhdGEtcm9vdC11cmwnKSlcbiAgICAgIEBhdXRoRGF0YSA9IEByb290UmVmLmdldEF1dGgoKVxuXG5cbiAgRmlyZWJhc2VTZXJ2aWNlLiRpbmplY3QgPSBbXVxuICBUaW1lU2hlZXRBcHAuc2VydmljZSBcIkZpcmViYXNlU2VydmljZVwiLCBGaXJlYmFzZVNlcnZpY2UiXX0=
 ;
 /*! jQuery v1.11.1 | (c) 2005, 2014 jQuery Foundation, Inc. | jquery.org/license */
 !function(a,b){"object"==typeof module&&"object"==typeof module.exports?module.exports=a.document?b(a,!0):function(a){if(!a.document)throw new Error("jQuery requires a window with a document");return b(a)}:b(a)}("undefined"!=typeof window?window:this,function(a,b){var c=[],d=c.slice,e=c.concat,f=c.push,g=c.indexOf,h={},i=h.toString,j=h.hasOwnProperty,k={},l="1.11.1",m=function(a,b){return new m.fn.init(a,b)},n=/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g,o=/^-ms-/,p=/-([\da-z])/gi,q=function(a,b){return b.toUpperCase()};m.fn=m.prototype={jquery:l,constructor:m,selector:"",length:0,toArray:function(){return d.call(this)},get:function(a){return null!=a?0>a?this[a+this.length]:this[a]:d.call(this)},pushStack:function(a){var b=m.merge(this.constructor(),a);return b.prevObject=this,b.context=this.context,b},each:function(a,b){return m.each(this,a,b)},map:function(a){return this.pushStack(m.map(this,function(b,c){return a.call(b,c,b)}))},slice:function(){return this.pushStack(d.apply(this,arguments))},first:function(){return this.eq(0)},last:function(){return this.eq(-1)},eq:function(a){var b=this.length,c=+a+(0>a?b:0);return this.pushStack(c>=0&&b>c?[this[c]]:[])},end:function(){return this.prevObject||this.constructor(null)},push:f,sort:c.sort,splice:c.splice},m.extend=m.fn.extend=function(){var a,b,c,d,e,f,g=arguments[0]||{},h=1,i=arguments.length,j=!1;for("boolean"==typeof g&&(j=g,g=arguments[h]||{},h++),"object"==typeof g||m.isFunction(g)||(g={}),h===i&&(g=this,h--);i>h;h++)if(null!=(e=arguments[h]))for(d in e)a=g[d],c=e[d],g!==c&&(j&&c&&(m.isPlainObject(c)||(b=m.isArray(c)))?(b?(b=!1,f=a&&m.isArray(a)?a:[]):f=a&&m.isPlainObject(a)?a:{},g[d]=m.extend(j,f,c)):void 0!==c&&(g[d]=c));return g},m.extend({expando:"jQuery"+(l+Math.random()).replace(/\D/g,""),isReady:!0,error:function(a){throw new Error(a)},noop:function(){},isFunction:function(a){return"function"===m.type(a)},isArray:Array.isArray||function(a){return"array"===m.type(a)},isWindow:function(a){return null!=a&&a==a.window},isNumeric:function(a){return!m.isArray(a)&&a-parseFloat(a)>=0},isEmptyObject:function(a){var b;for(b in a)return!1;return!0},isPlainObject:function(a){var b;if(!a||"object"!==m.type(a)||a.nodeType||m.isWindow(a))return!1;try{if(a.constructor&&!j.call(a,"constructor")&&!j.call(a.constructor.prototype,"isPrototypeOf"))return!1}catch(c){return!1}if(k.ownLast)for(b in a)return j.call(a,b);for(b in a);return void 0===b||j.call(a,b)},type:function(a){return null==a?a+"":"object"==typeof a||"function"==typeof a?h[i.call(a)]||"object":typeof a},globalEval:function(b){b&&m.trim(b)&&(a.execScript||function(b){a.eval.call(a,b)})(b)},camelCase:function(a){return a.replace(o,"ms-").replace(p,q)},nodeName:function(a,b){return a.nodeName&&a.nodeName.toLowerCase()===b.toLowerCase()},each:function(a,b,c){var d,e=0,f=a.length,g=r(a);if(c){if(g){for(;f>e;e++)if(d=b.apply(a[e],c),d===!1)break}else for(e in a)if(d=b.apply(a[e],c),d===!1)break}else if(g){for(;f>e;e++)if(d=b.call(a[e],e,a[e]),d===!1)break}else for(e in a)if(d=b.call(a[e],e,a[e]),d===!1)break;return a},trim:function(a){return null==a?"":(a+"").replace(n,"")},makeArray:function(a,b){var c=b||[];return null!=a&&(r(Object(a))?m.merge(c,"string"==typeof a?[a]:a):f.call(c,a)),c},inArray:function(a,b,c){var d;if(b){if(g)return g.call(b,a,c);for(d=b.length,c=c?0>c?Math.max(0,d+c):c:0;d>c;c++)if(c in b&&b[c]===a)return c}return-1},merge:function(a,b){var c=+b.length,d=0,e=a.length;while(c>d)a[e++]=b[d++];if(c!==c)while(void 0!==b[d])a[e++]=b[d++];return a.length=e,a},grep:function(a,b,c){for(var d,e=[],f=0,g=a.length,h=!c;g>f;f++)d=!b(a[f],f),d!==h&&e.push(a[f]);return e},map:function(a,b,c){var d,f=0,g=a.length,h=r(a),i=[];if(h)for(;g>f;f++)d=b(a[f],f,c),null!=d&&i.push(d);else for(f in a)d=b(a[f],f,c),null!=d&&i.push(d);return e.apply([],i)},guid:1,proxy:function(a,b){var c,e,f;return"string"==typeof b&&(f=a[b],b=a,a=f),m.isFunction(a)?(c=d.call(arguments,2),e=function(){return a.apply(b||this,c.concat(d.call(arguments)))},e.guid=a.guid=a.guid||m.guid++,e):void 0},now:function(){return+new Date},support:k}),m.each("Boolean Number String Function Array Date RegExp Object Error".split(" "),function(a,b){h["[object "+b+"]"]=b.toLowerCase()});function r(a){var b=a.length,c=m.type(a);return"function"===c||m.isWindow(a)?!1:1===a.nodeType&&b?!0:"array"===c||0===b||"number"==typeof b&&b>0&&b-1 in a}var s=function(a){var b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u="sizzle"+-new Date,v=a.document,w=0,x=0,y=gb(),z=gb(),A=gb(),B=function(a,b){return a===b&&(l=!0),0},C="undefined",D=1<<31,E={}.hasOwnProperty,F=[],G=F.pop,H=F.push,I=F.push,J=F.slice,K=F.indexOf||function(a){for(var b=0,c=this.length;c>b;b++)if(this[b]===a)return b;return-1},L="checked|selected|async|autofocus|autoplay|controls|defer|disabled|hidden|ismap|loop|multiple|open|readonly|required|scoped",M="[\\x20\\t\\r\\n\\f]",N="(?:\\\\.|[\\w-]|[^\\x00-\\xa0])+",O=N.replace("w","w#"),P="\\["+M+"*("+N+")(?:"+M+"*([*^$|!~]?=)"+M+"*(?:'((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\"|("+O+"))|)"+M+"*\\]",Q=":("+N+")(?:\\((('((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\")|((?:\\\\.|[^\\\\()[\\]]|"+P+")*)|.*)\\)|)",R=new RegExp("^"+M+"+|((?:^|[^\\\\])(?:\\\\.)*)"+M+"+$","g"),S=new RegExp("^"+M+"*,"+M+"*"),T=new RegExp("^"+M+"*([>+~]|"+M+")"+M+"*"),U=new RegExp("="+M+"*([^\\]'\"]*?)"+M+"*\\]","g"),V=new RegExp(Q),W=new RegExp("^"+O+"$"),X={ID:new RegExp("^#("+N+")"),CLASS:new RegExp("^\\.("+N+")"),TAG:new RegExp("^("+N.replace("w","w*")+")"),ATTR:new RegExp("^"+P),PSEUDO:new RegExp("^"+Q),CHILD:new RegExp("^:(only|first|last|nth|nth-last)-(child|of-type)(?:\\("+M+"*(even|odd|(([+-]|)(\\d*)n|)"+M+"*(?:([+-]|)"+M+"*(\\d+)|))"+M+"*\\)|)","i"),bool:new RegExp("^(?:"+L+")$","i"),needsContext:new RegExp("^"+M+"*[>+~]|:(even|odd|eq|gt|lt|nth|first|last)(?:\\("+M+"*((?:-\\d)?\\d*)"+M+"*\\)|)(?=[^-]|$)","i")},Y=/^(?:input|select|textarea|button)$/i,Z=/^h\d$/i,$=/^[^{]+\{\s*\[native \w/,_=/^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/,ab=/[+~]/,bb=/'|\\/g,cb=new RegExp("\\\\([\\da-f]{1,6}"+M+"?|("+M+")|.)","ig"),db=function(a,b,c){var d="0x"+b-65536;return d!==d||c?b:0>d?String.fromCharCode(d+65536):String.fromCharCode(d>>10|55296,1023&d|56320)};try{I.apply(F=J.call(v.childNodes),v.childNodes),F[v.childNodes.length].nodeType}catch(eb){I={apply:F.length?function(a,b){H.apply(a,J.call(b))}:function(a,b){var c=a.length,d=0;while(a[c++]=b[d++]);a.length=c-1}}}function fb(a,b,d,e){var f,h,j,k,l,o,r,s,w,x;if((b?b.ownerDocument||b:v)!==n&&m(b),b=b||n,d=d||[],!a||"string"!=typeof a)return d;if(1!==(k=b.nodeType)&&9!==k)return[];if(p&&!e){if(f=_.exec(a))if(j=f[1]){if(9===k){if(h=b.getElementById(j),!h||!h.parentNode)return d;if(h.id===j)return d.push(h),d}else if(b.ownerDocument&&(h=b.ownerDocument.getElementById(j))&&t(b,h)&&h.id===j)return d.push(h),d}else{if(f[2])return I.apply(d,b.getElementsByTagName(a)),d;if((j=f[3])&&c.getElementsByClassName&&b.getElementsByClassName)return I.apply(d,b.getElementsByClassName(j)),d}if(c.qsa&&(!q||!q.test(a))){if(s=r=u,w=b,x=9===k&&a,1===k&&"object"!==b.nodeName.toLowerCase()){o=g(a),(r=b.getAttribute("id"))?s=r.replace(bb,"\\$&"):b.setAttribute("id",s),s="[id='"+s+"'] ",l=o.length;while(l--)o[l]=s+qb(o[l]);w=ab.test(a)&&ob(b.parentNode)||b,x=o.join(",")}if(x)try{return I.apply(d,w.querySelectorAll(x)),d}catch(y){}finally{r||b.removeAttribute("id")}}}return i(a.replace(R,"$1"),b,d,e)}function gb(){var a=[];function b(c,e){return a.push(c+" ")>d.cacheLength&&delete b[a.shift()],b[c+" "]=e}return b}function hb(a){return a[u]=!0,a}function ib(a){var b=n.createElement("div");try{return!!a(b)}catch(c){return!1}finally{b.parentNode&&b.parentNode.removeChild(b),b=null}}function jb(a,b){var c=a.split("|"),e=a.length;while(e--)d.attrHandle[c[e]]=b}function kb(a,b){var c=b&&a,d=c&&1===a.nodeType&&1===b.nodeType&&(~b.sourceIndex||D)-(~a.sourceIndex||D);if(d)return d;if(c)while(c=c.nextSibling)if(c===b)return-1;return a?1:-1}function lb(a){return function(b){var c=b.nodeName.toLowerCase();return"input"===c&&b.type===a}}function mb(a){return function(b){var c=b.nodeName.toLowerCase();return("input"===c||"button"===c)&&b.type===a}}function nb(a){return hb(function(b){return b=+b,hb(function(c,d){var e,f=a([],c.length,b),g=f.length;while(g--)c[e=f[g]]&&(c[e]=!(d[e]=c[e]))})})}function ob(a){return a&&typeof a.getElementsByTagName!==C&&a}c=fb.support={},f=fb.isXML=function(a){var b=a&&(a.ownerDocument||a).documentElement;return b?"HTML"!==b.nodeName:!1},m=fb.setDocument=function(a){var b,e=a?a.ownerDocument||a:v,g=e.defaultView;return e!==n&&9===e.nodeType&&e.documentElement?(n=e,o=e.documentElement,p=!f(e),g&&g!==g.top&&(g.addEventListener?g.addEventListener("unload",function(){m()},!1):g.attachEvent&&g.attachEvent("onunload",function(){m()})),c.attributes=ib(function(a){return a.className="i",!a.getAttribute("className")}),c.getElementsByTagName=ib(function(a){return a.appendChild(e.createComment("")),!a.getElementsByTagName("*").length}),c.getElementsByClassName=$.test(e.getElementsByClassName)&&ib(function(a){return a.innerHTML="<div class='a'></div><div class='a i'></div>",a.firstChild.className="i",2===a.getElementsByClassName("i").length}),c.getById=ib(function(a){return o.appendChild(a).id=u,!e.getElementsByName||!e.getElementsByName(u).length}),c.getById?(d.find.ID=function(a,b){if(typeof b.getElementById!==C&&p){var c=b.getElementById(a);return c&&c.parentNode?[c]:[]}},d.filter.ID=function(a){var b=a.replace(cb,db);return function(a){return a.getAttribute("id")===b}}):(delete d.find.ID,d.filter.ID=function(a){var b=a.replace(cb,db);return function(a){var c=typeof a.getAttributeNode!==C&&a.getAttributeNode("id");return c&&c.value===b}}),d.find.TAG=c.getElementsByTagName?function(a,b){return typeof b.getElementsByTagName!==C?b.getElementsByTagName(a):void 0}:function(a,b){var c,d=[],e=0,f=b.getElementsByTagName(a);if("*"===a){while(c=f[e++])1===c.nodeType&&d.push(c);return d}return f},d.find.CLASS=c.getElementsByClassName&&function(a,b){return typeof b.getElementsByClassName!==C&&p?b.getElementsByClassName(a):void 0},r=[],q=[],(c.qsa=$.test(e.querySelectorAll))&&(ib(function(a){a.innerHTML="<select msallowclip=''><option selected=''></option></select>",a.querySelectorAll("[msallowclip^='']").length&&q.push("[*^$]="+M+"*(?:''|\"\")"),a.querySelectorAll("[selected]").length||q.push("\\["+M+"*(?:value|"+L+")"),a.querySelectorAll(":checked").length||q.push(":checked")}),ib(function(a){var b=e.createElement("input");b.setAttribute("type","hidden"),a.appendChild(b).setAttribute("name","D"),a.querySelectorAll("[name=d]").length&&q.push("name"+M+"*[*^$|!~]?="),a.querySelectorAll(":enabled").length||q.push(":enabled",":disabled"),a.querySelectorAll("*,:x"),q.push(",.*:")})),(c.matchesSelector=$.test(s=o.matches||o.webkitMatchesSelector||o.mozMatchesSelector||o.oMatchesSelector||o.msMatchesSelector))&&ib(function(a){c.disconnectedMatch=s.call(a,"div"),s.call(a,"[s!='']:x"),r.push("!=",Q)}),q=q.length&&new RegExp(q.join("|")),r=r.length&&new RegExp(r.join("|")),b=$.test(o.compareDocumentPosition),t=b||$.test(o.contains)?function(a,b){var c=9===a.nodeType?a.documentElement:a,d=b&&b.parentNode;return a===d||!(!d||1!==d.nodeType||!(c.contains?c.contains(d):a.compareDocumentPosition&&16&a.compareDocumentPosition(d)))}:function(a,b){if(b)while(b=b.parentNode)if(b===a)return!0;return!1},B=b?function(a,b){if(a===b)return l=!0,0;var d=!a.compareDocumentPosition-!b.compareDocumentPosition;return d?d:(d=(a.ownerDocument||a)===(b.ownerDocument||b)?a.compareDocumentPosition(b):1,1&d||!c.sortDetached&&b.compareDocumentPosition(a)===d?a===e||a.ownerDocument===v&&t(v,a)?-1:b===e||b.ownerDocument===v&&t(v,b)?1:k?K.call(k,a)-K.call(k,b):0:4&d?-1:1)}:function(a,b){if(a===b)return l=!0,0;var c,d=0,f=a.parentNode,g=b.parentNode,h=[a],i=[b];if(!f||!g)return a===e?-1:b===e?1:f?-1:g?1:k?K.call(k,a)-K.call(k,b):0;if(f===g)return kb(a,b);c=a;while(c=c.parentNode)h.unshift(c);c=b;while(c=c.parentNode)i.unshift(c);while(h[d]===i[d])d++;return d?kb(h[d],i[d]):h[d]===v?-1:i[d]===v?1:0},e):n},fb.matches=function(a,b){return fb(a,null,null,b)},fb.matchesSelector=function(a,b){if((a.ownerDocument||a)!==n&&m(a),b=b.replace(U,"='$1']"),!(!c.matchesSelector||!p||r&&r.test(b)||q&&q.test(b)))try{var d=s.call(a,b);if(d||c.disconnectedMatch||a.document&&11!==a.document.nodeType)return d}catch(e){}return fb(b,n,null,[a]).length>0},fb.contains=function(a,b){return(a.ownerDocument||a)!==n&&m(a),t(a,b)},fb.attr=function(a,b){(a.ownerDocument||a)!==n&&m(a);var e=d.attrHandle[b.toLowerCase()],f=e&&E.call(d.attrHandle,b.toLowerCase())?e(a,b,!p):void 0;return void 0!==f?f:c.attributes||!p?a.getAttribute(b):(f=a.getAttributeNode(b))&&f.specified?f.value:null},fb.error=function(a){throw new Error("Syntax error, unrecognized expression: "+a)},fb.uniqueSort=function(a){var b,d=[],e=0,f=0;if(l=!c.detectDuplicates,k=!c.sortStable&&a.slice(0),a.sort(B),l){while(b=a[f++])b===a[f]&&(e=d.push(f));while(e--)a.splice(d[e],1)}return k=null,a},e=fb.getText=function(a){var b,c="",d=0,f=a.nodeType;if(f){if(1===f||9===f||11===f){if("string"==typeof a.textContent)return a.textContent;for(a=a.firstChild;a;a=a.nextSibling)c+=e(a)}else if(3===f||4===f)return a.nodeValue}else while(b=a[d++])c+=e(b);return c},d=fb.selectors={cacheLength:50,createPseudo:hb,match:X,attrHandle:{},find:{},relative:{">":{dir:"parentNode",first:!0}," ":{dir:"parentNode"},"+":{dir:"previousSibling",first:!0},"~":{dir:"previousSibling"}},preFilter:{ATTR:function(a){return a[1]=a[1].replace(cb,db),a[3]=(a[3]||a[4]||a[5]||"").replace(cb,db),"~="===a[2]&&(a[3]=" "+a[3]+" "),a.slice(0,4)},CHILD:function(a){return a[1]=a[1].toLowerCase(),"nth"===a[1].slice(0,3)?(a[3]||fb.error(a[0]),a[4]=+(a[4]?a[5]+(a[6]||1):2*("even"===a[3]||"odd"===a[3])),a[5]=+(a[7]+a[8]||"odd"===a[3])):a[3]&&fb.error(a[0]),a},PSEUDO:function(a){var b,c=!a[6]&&a[2];return X.CHILD.test(a[0])?null:(a[3]?a[2]=a[4]||a[5]||"":c&&V.test(c)&&(b=g(c,!0))&&(b=c.indexOf(")",c.length-b)-c.length)&&(a[0]=a[0].slice(0,b),a[2]=c.slice(0,b)),a.slice(0,3))}},filter:{TAG:function(a){var b=a.replace(cb,db).toLowerCase();return"*"===a?function(){return!0}:function(a){return a.nodeName&&a.nodeName.toLowerCase()===b}},CLASS:function(a){var b=y[a+" "];return b||(b=new RegExp("(^|"+M+")"+a+"("+M+"|$)"))&&y(a,function(a){return b.test("string"==typeof a.className&&a.className||typeof a.getAttribute!==C&&a.getAttribute("class")||"")})},ATTR:function(a,b,c){return function(d){var e=fb.attr(d,a);return null==e?"!="===b:b?(e+="","="===b?e===c:"!="===b?e!==c:"^="===b?c&&0===e.indexOf(c):"*="===b?c&&e.indexOf(c)>-1:"$="===b?c&&e.slice(-c.length)===c:"~="===b?(" "+e+" ").indexOf(c)>-1:"|="===b?e===c||e.slice(0,c.length+1)===c+"-":!1):!0}},CHILD:function(a,b,c,d,e){var f="nth"!==a.slice(0,3),g="last"!==a.slice(-4),h="of-type"===b;return 1===d&&0===e?function(a){return!!a.parentNode}:function(b,c,i){var j,k,l,m,n,o,p=f!==g?"nextSibling":"previousSibling",q=b.parentNode,r=h&&b.nodeName.toLowerCase(),s=!i&&!h;if(q){if(f){while(p){l=b;while(l=l[p])if(h?l.nodeName.toLowerCase()===r:1===l.nodeType)return!1;o=p="only"===a&&!o&&"nextSibling"}return!0}if(o=[g?q.firstChild:q.lastChild],g&&s){k=q[u]||(q[u]={}),j=k[a]||[],n=j[0]===w&&j[1],m=j[0]===w&&j[2],l=n&&q.childNodes[n];while(l=++n&&l&&l[p]||(m=n=0)||o.pop())if(1===l.nodeType&&++m&&l===b){k[a]=[w,n,m];break}}else if(s&&(j=(b[u]||(b[u]={}))[a])&&j[0]===w)m=j[1];else while(l=++n&&l&&l[p]||(m=n=0)||o.pop())if((h?l.nodeName.toLowerCase()===r:1===l.nodeType)&&++m&&(s&&((l[u]||(l[u]={}))[a]=[w,m]),l===b))break;return m-=e,m===d||m%d===0&&m/d>=0}}},PSEUDO:function(a,b){var c,e=d.pseudos[a]||d.setFilters[a.toLowerCase()]||fb.error("unsupported pseudo: "+a);return e[u]?e(b):e.length>1?(c=[a,a,"",b],d.setFilters.hasOwnProperty(a.toLowerCase())?hb(function(a,c){var d,f=e(a,b),g=f.length;while(g--)d=K.call(a,f[g]),a[d]=!(c[d]=f[g])}):function(a){return e(a,0,c)}):e}},pseudos:{not:hb(function(a){var b=[],c=[],d=h(a.replace(R,"$1"));return d[u]?hb(function(a,b,c,e){var f,g=d(a,null,e,[]),h=a.length;while(h--)(f=g[h])&&(a[h]=!(b[h]=f))}):function(a,e,f){return b[0]=a,d(b,null,f,c),!c.pop()}}),has:hb(function(a){return function(b){return fb(a,b).length>0}}),contains:hb(function(a){return function(b){return(b.textContent||b.innerText||e(b)).indexOf(a)>-1}}),lang:hb(function(a){return W.test(a||"")||fb.error("unsupported lang: "+a),a=a.replace(cb,db).toLowerCase(),function(b){var c;do if(c=p?b.lang:b.getAttribute("xml:lang")||b.getAttribute("lang"))return c=c.toLowerCase(),c===a||0===c.indexOf(a+"-");while((b=b.parentNode)&&1===b.nodeType);return!1}}),target:function(b){var c=a.location&&a.location.hash;return c&&c.slice(1)===b.id},root:function(a){return a===o},focus:function(a){return a===n.activeElement&&(!n.hasFocus||n.hasFocus())&&!!(a.type||a.href||~a.tabIndex)},enabled:function(a){return a.disabled===!1},disabled:function(a){return a.disabled===!0},checked:function(a){var b=a.nodeName.toLowerCase();return"input"===b&&!!a.checked||"option"===b&&!!a.selected},selected:function(a){return a.parentNode&&a.parentNode.selectedIndex,a.selected===!0},empty:function(a){for(a=a.firstChild;a;a=a.nextSibling)if(a.nodeType<6)return!1;return!0},parent:function(a){return!d.pseudos.empty(a)},header:function(a){return Z.test(a.nodeName)},input:function(a){return Y.test(a.nodeName)},button:function(a){var b=a.nodeName.toLowerCase();return"input"===b&&"button"===a.type||"button"===b},text:function(a){var b;return"input"===a.nodeName.toLowerCase()&&"text"===a.type&&(null==(b=a.getAttribute("type"))||"text"===b.toLowerCase())},first:nb(function(){return[0]}),last:nb(function(a,b){return[b-1]}),eq:nb(function(a,b,c){return[0>c?c+b:c]}),even:nb(function(a,b){for(var c=0;b>c;c+=2)a.push(c);return a}),odd:nb(function(a,b){for(var c=1;b>c;c+=2)a.push(c);return a}),lt:nb(function(a,b,c){for(var d=0>c?c+b:c;--d>=0;)a.push(d);return a}),gt:nb(function(a,b,c){for(var d=0>c?c+b:c;++d<b;)a.push(d);return a})}},d.pseudos.nth=d.pseudos.eq;for(b in{radio:!0,checkbox:!0,file:!0,password:!0,image:!0})d.pseudos[b]=lb(b);for(b in{submit:!0,reset:!0})d.pseudos[b]=mb(b);function pb(){}pb.prototype=d.filters=d.pseudos,d.setFilters=new pb,g=fb.tokenize=function(a,b){var c,e,f,g,h,i,j,k=z[a+" "];if(k)return b?0:k.slice(0);h=a,i=[],j=d.preFilter;while(h){(!c||(e=S.exec(h)))&&(e&&(h=h.slice(e[0].length)||h),i.push(f=[])),c=!1,(e=T.exec(h))&&(c=e.shift(),f.push({value:c,type:e[0].replace(R," ")}),h=h.slice(c.length));for(g in d.filter)!(e=X[g].exec(h))||j[g]&&!(e=j[g](e))||(c=e.shift(),f.push({value:c,type:g,matches:e}),h=h.slice(c.length));if(!c)break}return b?h.length:h?fb.error(a):z(a,i).slice(0)};function qb(a){for(var b=0,c=a.length,d="";c>b;b++)d+=a[b].value;return d}function rb(a,b,c){var d=b.dir,e=c&&"parentNode"===d,f=x++;return b.first?function(b,c,f){while(b=b[d])if(1===b.nodeType||e)return a(b,c,f)}:function(b,c,g){var h,i,j=[w,f];if(g){while(b=b[d])if((1===b.nodeType||e)&&a(b,c,g))return!0}else while(b=b[d])if(1===b.nodeType||e){if(i=b[u]||(b[u]={}),(h=i[d])&&h[0]===w&&h[1]===f)return j[2]=h[2];if(i[d]=j,j[2]=a(b,c,g))return!0}}}function sb(a){return a.length>1?function(b,c,d){var e=a.length;while(e--)if(!a[e](b,c,d))return!1;return!0}:a[0]}function tb(a,b,c){for(var d=0,e=b.length;e>d;d++)fb(a,b[d],c);return c}function ub(a,b,c,d,e){for(var f,g=[],h=0,i=a.length,j=null!=b;i>h;h++)(f=a[h])&&(!c||c(f,d,e))&&(g.push(f),j&&b.push(h));return g}function vb(a,b,c,d,e,f){return d&&!d[u]&&(d=vb(d)),e&&!e[u]&&(e=vb(e,f)),hb(function(f,g,h,i){var j,k,l,m=[],n=[],o=g.length,p=f||tb(b||"*",h.nodeType?[h]:h,[]),q=!a||!f&&b?p:ub(p,m,a,h,i),r=c?e||(f?a:o||d)?[]:g:q;if(c&&c(q,r,h,i),d){j=ub(r,n),d(j,[],h,i),k=j.length;while(k--)(l=j[k])&&(r[n[k]]=!(q[n[k]]=l))}if(f){if(e||a){if(e){j=[],k=r.length;while(k--)(l=r[k])&&j.push(q[k]=l);e(null,r=[],j,i)}k=r.length;while(k--)(l=r[k])&&(j=e?K.call(f,l):m[k])>-1&&(f[j]=!(g[j]=l))}}else r=ub(r===g?r.splice(o,r.length):r),e?e(null,g,r,i):I.apply(g,r)})}function wb(a){for(var b,c,e,f=a.length,g=d.relative[a[0].type],h=g||d.relative[" "],i=g?1:0,k=rb(function(a){return a===b},h,!0),l=rb(function(a){return K.call(b,a)>-1},h,!0),m=[function(a,c,d){return!g&&(d||c!==j)||((b=c).nodeType?k(a,c,d):l(a,c,d))}];f>i;i++)if(c=d.relative[a[i].type])m=[rb(sb(m),c)];else{if(c=d.filter[a[i].type].apply(null,a[i].matches),c[u]){for(e=++i;f>e;e++)if(d.relative[a[e].type])break;return vb(i>1&&sb(m),i>1&&qb(a.slice(0,i-1).concat({value:" "===a[i-2].type?"*":""})).replace(R,"$1"),c,e>i&&wb(a.slice(i,e)),f>e&&wb(a=a.slice(e)),f>e&&qb(a))}m.push(c)}return sb(m)}function xb(a,b){var c=b.length>0,e=a.length>0,f=function(f,g,h,i,k){var l,m,o,p=0,q="0",r=f&&[],s=[],t=j,u=f||e&&d.find.TAG("*",k),v=w+=null==t?1:Math.random()||.1,x=u.length;for(k&&(j=g!==n&&g);q!==x&&null!=(l=u[q]);q++){if(e&&l){m=0;while(o=a[m++])if(o(l,g,h)){i.push(l);break}k&&(w=v)}c&&((l=!o&&l)&&p--,f&&r.push(l))}if(p+=q,c&&q!==p){m=0;while(o=b[m++])o(r,s,g,h);if(f){if(p>0)while(q--)r[q]||s[q]||(s[q]=G.call(i));s=ub(s)}I.apply(i,s),k&&!f&&s.length>0&&p+b.length>1&&fb.uniqueSort(i)}return k&&(w=v,j=t),r};return c?hb(f):f}return h=fb.compile=function(a,b){var c,d=[],e=[],f=A[a+" "];if(!f){b||(b=g(a)),c=b.length;while(c--)f=wb(b[c]),f[u]?d.push(f):e.push(f);f=A(a,xb(e,d)),f.selector=a}return f},i=fb.select=function(a,b,e,f){var i,j,k,l,m,n="function"==typeof a&&a,o=!f&&g(a=n.selector||a);if(e=e||[],1===o.length){if(j=o[0]=o[0].slice(0),j.length>2&&"ID"===(k=j[0]).type&&c.getById&&9===b.nodeType&&p&&d.relative[j[1].type]){if(b=(d.find.ID(k.matches[0].replace(cb,db),b)||[])[0],!b)return e;n&&(b=b.parentNode),a=a.slice(j.shift().value.length)}i=X.needsContext.test(a)?0:j.length;while(i--){if(k=j[i],d.relative[l=k.type])break;if((m=d.find[l])&&(f=m(k.matches[0].replace(cb,db),ab.test(j[0].type)&&ob(b.parentNode)||b))){if(j.splice(i,1),a=f.length&&qb(j),!a)return I.apply(e,f),e;break}}}return(n||h(a,o))(f,b,!p,e,ab.test(a)&&ob(b.parentNode)||b),e},c.sortStable=u.split("").sort(B).join("")===u,c.detectDuplicates=!!l,m(),c.sortDetached=ib(function(a){return 1&a.compareDocumentPosition(n.createElement("div"))}),ib(function(a){return a.innerHTML="<a href='#'></a>","#"===a.firstChild.getAttribute("href")})||jb("type|href|height|width",function(a,b,c){return c?void 0:a.getAttribute(b,"type"===b.toLowerCase()?1:2)}),c.attributes&&ib(function(a){return a.innerHTML="<input/>",a.firstChild.setAttribute("value",""),""===a.firstChild.getAttribute("value")})||jb("value",function(a,b,c){return c||"input"!==a.nodeName.toLowerCase()?void 0:a.defaultValue}),ib(function(a){return null==a.getAttribute("disabled")})||jb(L,function(a,b,c){var d;return c?void 0:a[b]===!0?b.toLowerCase():(d=a.getAttributeNode(b))&&d.specified?d.value:null}),fb}(a);m.find=s,m.expr=s.selectors,m.expr[":"]=m.expr.pseudos,m.unique=s.uniqueSort,m.text=s.getText,m.isXMLDoc=s.isXML,m.contains=s.contains;var t=m.expr.match.needsContext,u=/^<(\w+)\s*\/?>(?:<\/\1>|)$/,v=/^.[^:#\[\.,]*$/;function w(a,b,c){if(m.isFunction(b))return m.grep(a,function(a,d){return!!b.call(a,d,a)!==c});if(b.nodeType)return m.grep(a,function(a){return a===b!==c});if("string"==typeof b){if(v.test(b))return m.filter(b,a,c);b=m.filter(b,a)}return m.grep(a,function(a){return m.inArray(a,b)>=0!==c})}m.filter=function(a,b,c){var d=b[0];return c&&(a=":not("+a+")"),1===b.length&&1===d.nodeType?m.find.matchesSelector(d,a)?[d]:[]:m.find.matches(a,m.grep(b,function(a){return 1===a.nodeType}))},m.fn.extend({find:function(a){var b,c=[],d=this,e=d.length;if("string"!=typeof a)return this.pushStack(m(a).filter(function(){for(b=0;e>b;b++)if(m.contains(d[b],this))return!0}));for(b=0;e>b;b++)m.find(a,d[b],c);return c=this.pushStack(e>1?m.unique(c):c),c.selector=this.selector?this.selector+" "+a:a,c},filter:function(a){return this.pushStack(w(this,a||[],!1))},not:function(a){return this.pushStack(w(this,a||[],!0))},is:function(a){return!!w(this,"string"==typeof a&&t.test(a)?m(a):a||[],!1).length}});var x,y=a.document,z=/^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]*))$/,A=m.fn.init=function(a,b){var c,d;if(!a)return this;if("string"==typeof a){if(c="<"===a.charAt(0)&&">"===a.charAt(a.length-1)&&a.length>=3?[null,a,null]:z.exec(a),!c||!c[1]&&b)return!b||b.jquery?(b||x).find(a):this.constructor(b).find(a);if(c[1]){if(b=b instanceof m?b[0]:b,m.merge(this,m.parseHTML(c[1],b&&b.nodeType?b.ownerDocument||b:y,!0)),u.test(c[1])&&m.isPlainObject(b))for(c in b)m.isFunction(this[c])?this[c](b[c]):this.attr(c,b[c]);return this}if(d=y.getElementById(c[2]),d&&d.parentNode){if(d.id!==c[2])return x.find(a);this.length=1,this[0]=d}return this.context=y,this.selector=a,this}return a.nodeType?(this.context=this[0]=a,this.length=1,this):m.isFunction(a)?"undefined"!=typeof x.ready?x.ready(a):a(m):(void 0!==a.selector&&(this.selector=a.selector,this.context=a.context),m.makeArray(a,this))};A.prototype=m.fn,x=m(y);var B=/^(?:parents|prev(?:Until|All))/,C={children:!0,contents:!0,next:!0,prev:!0};m.extend({dir:function(a,b,c){var d=[],e=a[b];while(e&&9!==e.nodeType&&(void 0===c||1!==e.nodeType||!m(e).is(c)))1===e.nodeType&&d.push(e),e=e[b];return d},sibling:function(a,b){for(var c=[];a;a=a.nextSibling)1===a.nodeType&&a!==b&&c.push(a);return c}}),m.fn.extend({has:function(a){var b,c=m(a,this),d=c.length;return this.filter(function(){for(b=0;d>b;b++)if(m.contains(this,c[b]))return!0})},closest:function(a,b){for(var c,d=0,e=this.length,f=[],g=t.test(a)||"string"!=typeof a?m(a,b||this.context):0;e>d;d++)for(c=this[d];c&&c!==b;c=c.parentNode)if(c.nodeType<11&&(g?g.index(c)>-1:1===c.nodeType&&m.find.matchesSelector(c,a))){f.push(c);break}return this.pushStack(f.length>1?m.unique(f):f)},index:function(a){return a?"string"==typeof a?m.inArray(this[0],m(a)):m.inArray(a.jquery?a[0]:a,this):this[0]&&this[0].parentNode?this.first().prevAll().length:-1},add:function(a,b){return this.pushStack(m.unique(m.merge(this.get(),m(a,b))))},addBack:function(a){return this.add(null==a?this.prevObject:this.prevObject.filter(a))}});function D(a,b){do a=a[b];while(a&&1!==a.nodeType);return a}m.each({parent:function(a){var b=a.parentNode;return b&&11!==b.nodeType?b:null},parents:function(a){return m.dir(a,"parentNode")},parentsUntil:function(a,b,c){return m.dir(a,"parentNode",c)},next:function(a){return D(a,"nextSibling")},prev:function(a){return D(a,"previousSibling")},nextAll:function(a){return m.dir(a,"nextSibling")},prevAll:function(a){return m.dir(a,"previousSibling")},nextUntil:function(a,b,c){return m.dir(a,"nextSibling",c)},prevUntil:function(a,b,c){return m.dir(a,"previousSibling",c)},siblings:function(a){return m.sibling((a.parentNode||{}).firstChild,a)},children:function(a){return m.sibling(a.firstChild)},contents:function(a){return m.nodeName(a,"iframe")?a.contentDocument||a.contentWindow.document:m.merge([],a.childNodes)}},function(a,b){m.fn[a]=function(c,d){var e=m.map(this,b,c);return"Until"!==a.slice(-5)&&(d=c),d&&"string"==typeof d&&(e=m.filter(d,e)),this.length>1&&(C[a]||(e=m.unique(e)),B.test(a)&&(e=e.reverse())),this.pushStack(e)}});var E=/\S+/g,F={};function G(a){var b=F[a]={};return m.each(a.match(E)||[],function(a,c){b[c]=!0}),b}m.Callbacks=function(a){a="string"==typeof a?F[a]||G(a):m.extend({},a);var b,c,d,e,f,g,h=[],i=!a.once&&[],j=function(l){for(c=a.memory&&l,d=!0,f=g||0,g=0,e=h.length,b=!0;h&&e>f;f++)if(h[f].apply(l[0],l[1])===!1&&a.stopOnFalse){c=!1;break}b=!1,h&&(i?i.length&&j(i.shift()):c?h=[]:k.disable())},k={add:function(){if(h){var d=h.length;!function f(b){m.each(b,function(b,c){var d=m.type(c);"function"===d?a.unique&&k.has(c)||h.push(c):c&&c.length&&"string"!==d&&f(c)})}(arguments),b?e=h.length:c&&(g=d,j(c))}return this},remove:function(){return h&&m.each(arguments,function(a,c){var d;while((d=m.inArray(c,h,d))>-1)h.splice(d,1),b&&(e>=d&&e--,f>=d&&f--)}),this},has:function(a){return a?m.inArray(a,h)>-1:!(!h||!h.length)},empty:function(){return h=[],e=0,this},disable:function(){return h=i=c=void 0,this},disabled:function(){return!h},lock:function(){return i=void 0,c||k.disable(),this},locked:function(){return!i},fireWith:function(a,c){return!h||d&&!i||(c=c||[],c=[a,c.slice?c.slice():c],b?i.push(c):j(c)),this},fire:function(){return k.fireWith(this,arguments),this},fired:function(){return!!d}};return k},m.extend({Deferred:function(a){var b=[["resolve","done",m.Callbacks("once memory"),"resolved"],["reject","fail",m.Callbacks("once memory"),"rejected"],["notify","progress",m.Callbacks("memory")]],c="pending",d={state:function(){return c},always:function(){return e.done(arguments).fail(arguments),this},then:function(){var a=arguments;return m.Deferred(function(c){m.each(b,function(b,f){var g=m.isFunction(a[b])&&a[b];e[f[1]](function(){var a=g&&g.apply(this,arguments);a&&m.isFunction(a.promise)?a.promise().done(c.resolve).fail(c.reject).progress(c.notify):c[f[0]+"With"](this===d?c.promise():this,g?[a]:arguments)})}),a=null}).promise()},promise:function(a){return null!=a?m.extend(a,d):d}},e={};return d.pipe=d.then,m.each(b,function(a,f){var g=f[2],h=f[3];d[f[1]]=g.add,h&&g.add(function(){c=h},b[1^a][2].disable,b[2][2].lock),e[f[0]]=function(){return e[f[0]+"With"](this===e?d:this,arguments),this},e[f[0]+"With"]=g.fireWith}),d.promise(e),a&&a.call(e,e),e},when:function(a){var b=0,c=d.call(arguments),e=c.length,f=1!==e||a&&m.isFunction(a.promise)?e:0,g=1===f?a:m.Deferred(),h=function(a,b,c){return function(e){b[a]=this,c[a]=arguments.length>1?d.call(arguments):e,c===i?g.notifyWith(b,c):--f||g.resolveWith(b,c)}},i,j,k;if(e>1)for(i=new Array(e),j=new Array(e),k=new Array(e);e>b;b++)c[b]&&m.isFunction(c[b].promise)?c[b].promise().done(h(b,k,c)).fail(g.reject).progress(h(b,j,i)):--f;return f||g.resolveWith(k,c),g.promise()}});var H;m.fn.ready=function(a){return m.ready.promise().done(a),this},m.extend({isReady:!1,readyWait:1,holdReady:function(a){a?m.readyWait++:m.ready(!0)},ready:function(a){if(a===!0?!--m.readyWait:!m.isReady){if(!y.body)return setTimeout(m.ready);m.isReady=!0,a!==!0&&--m.readyWait>0||(H.resolveWith(y,[m]),m.fn.triggerHandler&&(m(y).triggerHandler("ready"),m(y).off("ready")))}}});function I(){y.addEventListener?(y.removeEventListener("DOMContentLoaded",J,!1),a.removeEventListener("load",J,!1)):(y.detachEvent("onreadystatechange",J),a.detachEvent("onload",J))}function J(){(y.addEventListener||"load"===event.type||"complete"===y.readyState)&&(I(),m.ready())}m.ready.promise=function(b){if(!H)if(H=m.Deferred(),"complete"===y.readyState)setTimeout(m.ready);else if(y.addEventListener)y.addEventListener("DOMContentLoaded",J,!1),a.addEventListener("load",J,!1);else{y.attachEvent("onreadystatechange",J),a.attachEvent("onload",J);var c=!1;try{c=null==a.frameElement&&y.documentElement}catch(d){}c&&c.doScroll&&!function e(){if(!m.isReady){try{c.doScroll("left")}catch(a){return setTimeout(e,50)}I(),m.ready()}}()}return H.promise(b)};var K="undefined",L;for(L in m(k))break;k.ownLast="0"!==L,k.inlineBlockNeedsLayout=!1,m(function(){var a,b,c,d;c=y.getElementsByTagName("body")[0],c&&c.style&&(b=y.createElement("div"),d=y.createElement("div"),d.style.cssText="position:absolute;border:0;width:0;height:0;top:0;left:-9999px",c.appendChild(d).appendChild(b),typeof b.style.zoom!==K&&(b.style.cssText="display:inline;margin:0;border:0;padding:1px;width:1px;zoom:1",k.inlineBlockNeedsLayout=a=3===b.offsetWidth,a&&(c.style.zoom=1)),c.removeChild(d))}),function(){var a=y.createElement("div");if(null==k.deleteExpando){k.deleteExpando=!0;try{delete a.test}catch(b){k.deleteExpando=!1}}a=null}(),m.acceptData=function(a){var b=m.noData[(a.nodeName+" ").toLowerCase()],c=+a.nodeType||1;return 1!==c&&9!==c?!1:!b||b!==!0&&a.getAttribute("classid")===b};var M=/^(?:\{[\w\W]*\}|\[[\w\W]*\])$/,N=/([A-Z])/g;function O(a,b,c){if(void 0===c&&1===a.nodeType){var d="data-"+b.replace(N,"-$1").toLowerCase();if(c=a.getAttribute(d),"string"==typeof c){try{c="true"===c?!0:"false"===c?!1:"null"===c?null:+c+""===c?+c:M.test(c)?m.parseJSON(c):c}catch(e){}m.data(a,b,c)}else c=void 0}return c}function P(a){var b;for(b in a)if(("data"!==b||!m.isEmptyObject(a[b]))&&"toJSON"!==b)return!1;return!0}function Q(a,b,d,e){if(m.acceptData(a)){var f,g,h=m.expando,i=a.nodeType,j=i?m.cache:a,k=i?a[h]:a[h]&&h;
@@ -15804,13 +20791,51 @@ if(function(a,b){function c(b,c){var e,f,g,h=b.nodeName.toLowerCase();return"are
 
 define("vendor/underscore", function(){});
 
+define('app/directives/directives',['app/base', 'fbase'], function(TimeSheetApp) {
+  return TimeSheetApp.directive('validNumber', function() {
+    return {
+      require: '?ngModel',
+      link: function(scope, element, attrs, ngModelCtrl) {
+        if (!ngModelCtrl) {
+          return;
+        }
+        ngModelCtrl.$parsers.push(function(val) {
+          var val;
+          var clean, decimalCheck;
+          if (angular.isUndefined(val)) {
+            val = '';
+          }
+          clean = val.replace(/[^0-9\.]/g, '');
+          decimalCheck = clean.split('.');
+          if (!angular.isUndefined(decimalCheck[1])) {
+            decimalCheck[1] = decimalCheck[1].slice(0, 2);
+            clean = decimalCheck[0] + '.' + decimalCheck[1];
+          }
+          if (val !== clean) {
+            ngModelCtrl.$setViewValue(clean);
+            ngModelCtrl.$render();
+          }
+          return clean;
+        });
+        element.bind('keypress', function(event) {
+          if (event.keyCode === 32) {
+            event.preventDefault();
+          }
+        });
+      }
+    };
+  });
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9hcHAvZGlyZWN0aXZlcy9kaXJlY3RpdmVzLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL2Fzc2V0cy9qYXZhc2NyaXB0cy9hcHAvZGlyZWN0aXZlcy9kaXJlY3RpdmVzLmNvZmZlZSJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxNQUFBLENBQU8sQ0FBRSxVQUFGLEVBQWMsT0FBZCxDQUFQLEVBQThCLFNBQUMsWUFBRCxHQUFBO1NBRzVCLFlBQVksQ0FBQyxTQUFiLENBQXdCLGFBQXhCLEVBQXNDLFNBQUEsR0FBQTtXQUNwQztBQUFBLE1BQ0EsT0FBQSxFQUFVLFVBRFY7QUFBQSxNQUVBLElBQUEsRUFBTSxTQUFDLEtBQUQsRUFBUSxPQUFSLEVBQWlCLEtBQWpCLEVBQXdCLFdBQXhCLEdBQUE7QUFDSixRQUFBLElBQUcsQ0FBQSxXQUFIO0FBQ0UsZ0JBQUEsQ0FERjtTQUFBO0FBQUEsUUFFQSxXQUFXLENBQUMsUUFBUSxDQUFDLElBQXJCLENBQTBCLFNBQUMsR0FBRCxHQUFBO0FBQ3hCLFVBQUEsT0FBQSxDQUFBO0FBQUEsY0FBQSxtQkFBQTtBQUNBLFVBQUEsSUFBRyxPQUFPLENBQUMsV0FBUixDQUFvQixHQUFwQixDQUFIO0FBQ0UsWUFBQSxHQUFBLEdBQU8sRUFBUCxDQURGO1dBREE7QUFBQSxVQUdBLEtBQUEsR0FBUSxHQUFHLENBQUMsT0FBSixDQUFZLFdBQVosRUFBMEIsRUFBMUIsQ0FIUixDQUFBO0FBQUEsVUFJQSxZQUFBLEdBQWUsS0FBSyxDQUFDLEtBQU4sQ0FBYSxHQUFiLENBSmYsQ0FBQTtBQUtBLFVBQUEsSUFBRyxDQUFBLE9BQVEsQ0FBQyxXQUFSLENBQW9CLFlBQWEsQ0FBQSxDQUFBLENBQWpDLENBQUo7QUFDRSxZQUFBLFlBQWEsQ0FBQSxDQUFBLENBQWIsR0FBa0IsWUFBYSxDQUFBLENBQUEsQ0FBRSxDQUFDLEtBQWhCLENBQXNCLENBQXRCLEVBQXlCLENBQXpCLENBQWxCLENBQUE7QUFBQSxZQUNBLEtBQUEsR0FBUSxZQUFhLENBQUEsQ0FBQSxDQUFiLEdBQW1CLEdBQW5CLEdBQXdCLFlBQWEsQ0FBQSxDQUFBLENBRDdDLENBREY7V0FMQTtBQVFBLFVBQUEsSUFBRyxHQUFBLEtBQU8sS0FBVjtBQUNFLFlBQUEsV0FBVyxDQUFDLGFBQVosQ0FBMEIsS0FBMUIsQ0FBQSxDQUFBO0FBQUEsWUFDQSxXQUFXLENBQUMsT0FBWixDQUFBLENBREEsQ0FERjtXQVJBO2lCQVdBLE1BWndCO1FBQUEsQ0FBMUIsQ0FGQSxDQUFBO0FBQUEsUUFlQSxPQUFPLENBQUMsSUFBUixDQUFjLFVBQWQsRUFBeUIsU0FBQyxLQUFELEdBQUE7QUFDdkIsVUFBQSxJQUFHLEtBQUssQ0FBQyxPQUFOLEtBQWlCLEVBQXBCO0FBQ0UsWUFBQSxLQUFLLENBQUMsY0FBTixDQUFBLENBQUEsQ0FERjtXQUR1QjtRQUFBLENBQXpCLENBZkEsQ0FESTtNQUFBLENBRk47TUFEb0M7RUFBQSxDQUF0QyxFQUg0QjtBQUFBLENBQTlCLENBQUEsQ0FBQSIsInNvdXJjZXNDb250ZW50IjpbImRlZmluZSBbJ2FwcC9iYXNlJywgJ2ZiYXNlJ10sIChUaW1lU2hlZXRBcHApIC0+XG5cblxuICBUaW1lU2hlZXRBcHAuZGlyZWN0aXZlICd2YWxpZE51bWJlcicsIC0+XG4gICAge1xuICAgIHJlcXVpcmU6ICc/bmdNb2RlbCdcbiAgICBsaW5rOiAoc2NvcGUsIGVsZW1lbnQsIGF0dHJzLCBuZ01vZGVsQ3RybCkgLT5cbiAgICAgIGlmICFuZ01vZGVsQ3RybFxuICAgICAgICByZXR1cm5cbiAgICAgIG5nTW9kZWxDdHJsLiRwYXJzZXJzLnB1c2ggKHZhbCkgLT5cbiAgICAgICAgYHZhciB2YWxgXG4gICAgICAgIGlmIGFuZ3VsYXIuaXNVbmRlZmluZWQodmFsKVxuICAgICAgICAgIHZhbCA9ICcnXG4gICAgICAgIGNsZWFuID0gdmFsLnJlcGxhY2UoL1teMC05XFwuXS9nLCAnJylcbiAgICAgICAgZGVjaW1hbENoZWNrID0gY2xlYW4uc3BsaXQoJy4nKVxuICAgICAgICBpZiAhYW5ndWxhci5pc1VuZGVmaW5lZChkZWNpbWFsQ2hlY2tbMV0pXG4gICAgICAgICAgZGVjaW1hbENoZWNrWzFdID0gZGVjaW1hbENoZWNrWzFdLnNsaWNlKDAsIDIpXG4gICAgICAgICAgY2xlYW4gPSBkZWNpbWFsQ2hlY2tbMF0gKyAnLicgKyBkZWNpbWFsQ2hlY2tbMV1cbiAgICAgICAgaWYgdmFsICE9IGNsZWFuXG4gICAgICAgICAgbmdNb2RlbEN0cmwuJHNldFZpZXdWYWx1ZSBjbGVhblxuICAgICAgICAgIG5nTW9kZWxDdHJsLiRyZW5kZXIoKVxuICAgICAgICBjbGVhblxuICAgICAgZWxlbWVudC5iaW5kICdrZXlwcmVzcycsIChldmVudCkgLT5cbiAgICAgICAgaWYgZXZlbnQua2V5Q29kZSA9PSAzMlxuICAgICAgICAgIGV2ZW50LnByZXZlbnREZWZhdWx0KClcbiAgICAgICAgcmV0dXJuXG4gICAgICByZXR1cm5cblxuICAgIH1cblxuIl19
+;
 if (document.location.hash !== "") {
   document.location.href = document.location.href.replace(document.location.hash, "");
 }
 
-require(['angularjs', 'fbase', 'app/base', 'app/controllers/nav_controller', 'app/controllers/dashboard_controller', 'app/services/firebase_service', 'jquery', 'moment', 'flatUi', 'vendor/underscore'], function(angular, Firebase, TimeSheetApp, NavBarController, DashBoardController, FirebaseService, $, moment, flatui, _) {});
+require(['angularjs', 'fbase', 'app/base', 'app/controllers/nav_controller', 'app/controllers/dashboard_controller', 'app/services/firebase_service', 'jquery', 'moment', 'flatUi', 'vendor/underscore', 'app/directives/directives'], function(angular, Firebase, TimeSheetApp, NavBarController, DashBoardController, FirebaseService, $, moment, flatui, _) {});
 
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9tYWluLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL2Fzc2V0cy9qYXZhc2NyaXB0cy9tYWluLmNvZmZlZSJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxJQUFPLFFBQVEsQ0FBQyxRQUFRLENBQUMsSUFBbEIsS0FBMkIsRUFBbEM7QUFDRSxFQUFBLFFBQVEsQ0FBQyxRQUFRLENBQUMsSUFBbEIsR0FBeUIsUUFBUSxDQUFDLFFBQVEsQ0FBQyxJQUFJLENBQUMsT0FBdkIsQ0FBK0IsUUFBUSxDQUFDLFFBQVEsQ0FBQyxJQUFqRCxFQUF5RCxFQUF6RCxDQUF6QixDQURGO0NBQUE7O0FBQUEsT0FHQSxDQUFRLENBQUUsV0FBRixFQUFlLE9BQWYsRUFBd0IsVUFBeEIsRUFDRSxnQ0FERixFQUVFLHNDQUZGLEVBR0UsK0JBSEYsRUFHbUMsUUFIbkMsRUFHNkMsUUFIN0MsRUFHdUQsUUFIdkQsRUFJRSxtQkFKRixDQUFSLEVBSStCLFNBQUMsT0FBRCxFQUFVLFFBQVYsRUFBb0IsWUFBcEIsRUFDQyxnQkFERCxFQUNtQixtQkFEbkIsRUFFQyxlQUZELEVBRWtCLENBRmxCLEVBRXFCLE1BRnJCLEVBRTZCLE1BRjdCLEVBRXNDLENBRnRDLEdBQUEsQ0FKL0IsQ0FIQSxDQUFBIiwic291cmNlc0NvbnRlbnQiOlsidW5sZXNzIGRvY3VtZW50LmxvY2F0aW9uLmhhc2ggPT0gXCJcIlxuICBkb2N1bWVudC5sb2NhdGlvbi5ocmVmID0gZG9jdW1lbnQubG9jYXRpb24uaHJlZi5yZXBsYWNlKGRvY3VtZW50LmxvY2F0aW9uLmhhc2ggLCBcIlwiIClcblxucmVxdWlyZSBbJ2FuZ3VsYXJqcycsICdmYmFzZScsICdhcHAvYmFzZScsXG4gICAgICAgICAnYXBwL2NvbnRyb2xsZXJzL25hdl9jb250cm9sbGVyJyxcbiAgICAgICAgICdhcHAvY29udHJvbGxlcnMvZGFzaGJvYXJkX2NvbnRyb2xsZXInLFxuICAgICAgICAgJ2FwcC9zZXJ2aWNlcy9maXJlYmFzZV9zZXJ2aWNlJywgJ2pxdWVyeScsICdtb21lbnQnLCAnZmxhdFVpJ1xuICAgICAgICAgJ3ZlbmRvci91bmRlcnNjb3JlJ10sIChhbmd1bGFyICxGaXJlYmFzZSwgVGltZVNoZWV0QXBwLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBOYXZCYXJDb250cm9sbGVyLCBEYXNoQm9hcmRDb250cm9sbGVyLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBGaXJlYmFzZVNlcnZpY2UsICQsIG1vbWVudCwgZmxhdHVpICwgXykgLT5cblxuIl19
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL3B1YmxpYy9qYXZhc2NyaXB0cy9tYWluLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiL1VzZXJzL2tyaXNobmFyb2toYWxlL2NvZGUvbGV2ZWwvbGV2ZWwvdGltZXNoZWV0YXBwL2Fzc2V0cy9qYXZhc2NyaXB0cy9tYWluLmNvZmZlZSJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxJQUFPLFFBQVEsQ0FBQyxRQUFRLENBQUMsSUFBbEIsS0FBMkIsRUFBbEM7QUFDRSxFQUFBLFFBQVEsQ0FBQyxRQUFRLENBQUMsSUFBbEIsR0FBeUIsUUFBUSxDQUFDLFFBQVEsQ0FBQyxJQUFJLENBQUMsT0FBdkIsQ0FBK0IsUUFBUSxDQUFDLFFBQVEsQ0FBQyxJQUFqRCxFQUF5RCxFQUF6RCxDQUF6QixDQURGO0NBQUE7O0FBQUEsT0FHQSxDQUFRLENBQUUsV0FBRixFQUFlLE9BQWYsRUFBd0IsVUFBeEIsRUFDRSxnQ0FERixFQUVFLHNDQUZGLEVBR0UsK0JBSEYsRUFHbUMsUUFIbkMsRUFHNkMsUUFIN0MsRUFHdUQsUUFIdkQsRUFJRSxtQkFKRixFQUl1QiwyQkFKdkIsQ0FBUixFQUk2RCxTQUFDLE9BQUQsRUFBVSxRQUFWLEVBQW9CLFlBQXBCLEVBQ0MsZ0JBREQsRUFDbUIsbUJBRG5CLEVBRUMsZUFGRCxFQUVrQixDQUZsQixFQUVxQixNQUZyQixFQUU2QixNQUY3QixFQUVzQyxDQUZ0QyxHQUFBLENBSjdELENBSEEsQ0FBQSIsInNvdXJjZXNDb250ZW50IjpbInVubGVzcyBkb2N1bWVudC5sb2NhdGlvbi5oYXNoID09IFwiXCJcbiAgZG9jdW1lbnQubG9jYXRpb24uaHJlZiA9IGRvY3VtZW50LmxvY2F0aW9uLmhyZWYucmVwbGFjZShkb2N1bWVudC5sb2NhdGlvbi5oYXNoICwgXCJcIiApXG5cbnJlcXVpcmUgWydhbmd1bGFyanMnLCAnZmJhc2UnLCAnYXBwL2Jhc2UnLFxuICAgICAgICAgJ2FwcC9jb250cm9sbGVycy9uYXZfY29udHJvbGxlcicsXG4gICAgICAgICAnYXBwL2NvbnRyb2xsZXJzL2Rhc2hib2FyZF9jb250cm9sbGVyJyxcbiAgICAgICAgICdhcHAvc2VydmljZXMvZmlyZWJhc2Vfc2VydmljZScsICdqcXVlcnknLCAnbW9tZW50JywgJ2ZsYXRVaSdcbiAgICAgICAgICd2ZW5kb3IvdW5kZXJzY29yZScsICdhcHAvZGlyZWN0aXZlcy9kaXJlY3RpdmVzJyBdLCAoYW5ndWxhciAsRmlyZWJhc2UsIFRpbWVTaGVldEFwcCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgTmF2QmFyQ29udHJvbGxlciwgRGFzaEJvYXJkQ29udHJvbGxlcixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgRmlyZWJhc2VTZXJ2aWNlLCAkLCBtb21lbnQsIGZsYXR1aSAsIF8pIC0+XG5cbiJdfQ==
 ;
 define("main", function(){});
 

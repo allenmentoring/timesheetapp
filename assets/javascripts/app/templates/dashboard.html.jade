@@ -1,3 +1,123 @@
-//.col-md-12.pan(style='position:relative;z-index:-100')
 .col-md-12.pan.man(ng-controller="DashBoardController")
-    h1.text-center.text-dark-gray App Canvas
+    h4.text-center.text-dark-gray.ng-cloak(ng-show='roleNotSet') Please contact the admin to set a role for you.
+
+    .col-md-12.pan.text-center.bg-grey-light.text-primary.mbl
+        h6(ng-show="currentDash=='Manager'") MANAGER DASHBOARD
+        h6(ng-show="currentDash=='Mentor'") MENTOR DASHBOARD
+
+
+    //p {{mentors | json}}
+    .col-md-8.col-md-offset-2.mtl.text-center.ng-cloak(ng-show="!currentDash")
+        i.icon-spin5.animate-spin.text-dark-gray.font20.mtl
+
+    .col-md-8.col-md-offset-2.mtl.pan.bor.ng-cloak(ng-show="currentDash=='Manager'")
+        .col-md-12.bbs.pam
+            .col-md-3
+                i.icon-left-big.cursorp(ng-click='prevPeriod()')
+            .col-md-2
+                h6.man.pan.text-dark-gray {{formattedStart}}
+            .col-md-2.text-center
+                i.icon-minus
+            .col-md-2.text-right
+                h6.man.pan.text-dark-gray {{formattedEnd}}
+            .col-md-3.text-right
+                i.icon-right-big.cursorp(ng-click='nextPeriod()')
+
+        .row.man.pan.dash-bars.ng-cloak(style='border-bottom:1px solid #ddd', g-if="userBasic.email == 'admin@gilders.in'")
+            .col-md-6.bbs.pan.text-center.cursorp.ng-cloak.brs(ng-click='openTimesheetsTab()', ng-class="selectedTab == 'TIMESHEETS' ? 'bg-grey-light text-primary' : 'text-6' ")
+                p.font18.mas
+                    i.icon-clock-1
+                    | Timesheets
+
+            .col-md-6.pan.bbs.text-center.cursorp.ng-cloak(ng-click='openInvoicesTab()', ng-class="selectedTab == 'INVOICES' ? 'bg-grey-light text-primary' : 'text-6' ")
+                p.font18.mas
+                    i.icon-money
+                    | Invoices
+
+
+            .col-md-12.pan
+                table.table.table-striped.table-hover.mtl.ptl
+                    thead
+                        tr
+                            th Mentor Name
+                            th Total Hours
+                    tbody
+                        tr(ng-repeat="(userid, user) in managers")
+                            td {{user.basic.firstName}} {{user.basic.lastName}}
+                            td
+
+                        tr(ng-repeat="(userid, user) in users")
+                            td {{user.firstName}}
+                            td {{user.lastName}}
+                            td {{user.email}}
+                            td {{user.password}}
+                            td
+                                .btn.btn-xs(ng-class= "user.manager ? 'btn-primary' : 'btn-default'",ng-click='assignManager(user, userid)') Manager
+                            td
+                                .btn.btn-xs(ng-class= "user.mentor ? 'btn-primary' : 'btn-default'",ng-click='assignMentor(user, userid)') Mentor
+                            td
+                                .btn.btn-xs.btn-default(ng-click='sendEmail(user, userid)') Send Email
+
+
+    .col-md-8.col-md-offset-2.mtl.pan.bor.ng-cloak(ng-show="currentDash=='Mentor'")
+        .col-md-12.bbs.pam
+            .col-md-3
+                i.icon-left-big.cursorp(ng-click='prevPeriod()')
+            .col-md-2
+                h6.man.pan.text-dark-gray {{formattedStart}}
+            .col-md-2.text-center
+                i.icon-minus
+            .col-md-2.text-right
+                h6.man.pan.text-dark-gray {{formattedEnd}}
+            .col-md-3.text-right
+                i.icon-right-big.cursorp(ng-click='nextPeriod()')
+
+        .col-md-12.pan.ng-cloak.pal(ng-show='currentTimeSheetSubmitted.$value')
+            h4.text-center.text-dark-gray You have already submitted the timesheet for this period.
+
+        .col-md-12.pan.ng-cloak(ng-show='!currentTimeSheetSubmitted.$value')
+            table.table.table-striped.table-hover.mtl.ptl
+                thead
+                    tr
+                        th Date
+                        th Student Name
+                        th Length
+                        th Notes
+                        th
+                tbody
+                    tr(ng-repeat="(sheetId, sheet) in currentTimeSheet")
+                        td {{sheet.date}}
+                        td {{sheet.student.name}}
+                        td {{sheet.length}}
+                        td {{sheet.notes}}
+                        td
+                            .btn.btn-xs.btn-danger.icon-cancel(ng-click='removeLesson(sheetId)')
+                    tr
+                        td
+                            .form-group.man
+                                .input-group
+                                    //span.input-group-btn
+                                        //button.btn(type="button")
+                                            span.fui-calendar
+                                    input#datepicker-01.form-control(type="text", value="{{formattedStart}}")
+                        td
+                            .form-group.man
+                                input.form-control(type="text", typeahead-on-select='onTypeaheadSelect($item)', ng-model="lessonModel.student", typeahead-input-formatter="formatLabel($model)", placeholder='Student name', typeahead="student as student.name for student in students | filter:$viewValue | limitTo:5")
+                        td
+                            .form-group.man
+                                input.form-control(type="text", ng-model="lessonModel.length", placeholder='Length', valid-number)
+                        td
+                            .form-group.man
+                                input.form-control(type="text", placeholder='Notes', ng-model="lessonModel.notes")
+                        td
+                            &nbsp;
+
+
+        .col-md-12(ng-show='!currentTimeSheetSubmitted.$value')
+            .col-md-6.pal
+                .btn.btn-sm.btn-primary(ng-click='addLesson()') Add Lesson
+            .col-md-6.pal
+                .pull-right.btn.btn-sm.btn-warning(ng-click='submitTimeSheet()') Submit Timesheet
+
+
+

@@ -14,6 +14,32 @@ timeSheetTriggers = (appVars) ->
     emailer.send()
 
 
+  # seeds for parents and students
+  rootRef.child('parents').set null
+  rootRef.child('students').set null
+
+  parent1 = rootRef.child('parents').push()
+  parent2 = rootRef.child('parents').push()
+
+  parent1.set {firstName: 'Karen', lastName: 'Wu'}
+  parent2.set {firstName: 'Kim', lastName: 'Jong'}
+
+  student1 = rootRef.child('students').push()
+  student2 = rootRef.child('students').push()
+
+  student1.set {firstName: 'Ninja', lastName: 'Wu'}
+  student2.set {firstName: 'Tim', lastName: 'Jong'}
+
+  parent1.child('children').push().set {firstName: 'Ninja', lastName: 'Wu', studentId: student1.key()}
+  parent2.child('children').push().set {firstName: 'Tim', lastName: 'Jong', studentId: student2.key()}
+
+  student1.child('parent').set {firstName: 'Karen', lastName: 'Wu', parentId: parent1.key()}
+  student2.child('parent').set {firstName: 'Kim', lastName: 'Jong', parentId: parent2.key()}
+
+
+
+
+
 
 
   # new user

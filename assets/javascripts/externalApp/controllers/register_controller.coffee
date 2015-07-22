@@ -9,16 +9,20 @@ define ['externalApp/base','angularjs', 'fbase'], (TimeSheetApp) ->
       $scope.assignManager = (user, id) ->
         FirebaseService.rootRef.child("users/#{id}/basic/manager").set true
         FirebaseService.rootRef.child("users/#{id}/basic/mentor").set false
+        FirebaseService.rootRef.child("users/#{id}").setPriority 'manager'
 
         FirebaseService.rootRef.child("registrations/#{id}/manager").set true
         FirebaseService.rootRef.child("registrations/#{id}/mentor").set false
+        FirebaseService.rootRef.child("registrations/#{id}").setPriority 'manager'
 
       $scope.assignMentor = (user, id) ->
         FirebaseService.rootRef.child("users/#{id}/basic/manager").set false
         FirebaseService.rootRef.child("users/#{id}/basic/mentor").set true
+        FirebaseService.rootRef.child("users/#{id}").setPriority 'mentor'
 
         FirebaseService.rootRef.child("registrations/#{id}/manager").set false
         FirebaseService.rootRef.child("registrations/#{id}/mentor").set true
+        FirebaseService.rootRef.child("registrations/#{id}").setPriority 'mentor'
 
       $scope.sendEmail = (user, id) ->
         FirebaseService.rootRef.child("queues/sendCredentialsEmail").push().set {userId: id}

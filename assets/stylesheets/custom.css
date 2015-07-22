@@ -431,3 +431,6 @@ overflow: -moz-scrollbars-none;
 .text-light-gray {
     color: #bbb;
 }
+
+
+.nav, .pagination, .carousel, .panel-title a { cursor: pointer; }

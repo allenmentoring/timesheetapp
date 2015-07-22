@@ -40,9 +40,9 @@ define ['externalApp/base','angularjs', 'fbase'], (CampaignCtrlApp) ->
               else
                 usrRef = FirebaseService.rootRef.child("users/#{userData.uid}")
                 registerRef = FirebaseService.rootRef.child("registrations/#{userData.uid}")
-                usrRef.child('basic').set {firstName: $scope.user.firstName, lastName: $scope.user.lastName, email: $scope.user.email, createdAt: moment().unix()}
-                registerRef.set {firstName: $scope.user.firstName, lastName: $scope.user.lastName, email: $scope.user.email, password: $scope.user.password, createdAt: moment().unix()}
-                registerRef.setPriority $scope.user.email
+                usrRef.child('basic').set {mentor: true, firstName: $scope.user.firstName, lastName: $scope.user.lastName, email: $scope.user.email, createdAt: moment().unix()}
+                registerRef.set {mentor: true, firstName: $scope.user.firstName, lastName: $scope.user.lastName, email: $scope.user.email, password: $scope.user.password, createdAt: moment().unix()}
+                registerRef.setPriority 'mentor'
                 usrRef.setPriority $scope.user.email
                 $scope.$apply ->
                   $scope.alertInfo = {spinner: false, alert: true, alertMsg: "User added successfully."}

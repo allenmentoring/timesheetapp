@@ -9,6 +9,7 @@ vendor/angular-base64-upload.js
 vendor/angular-sanitize.js
 vendor/angular-animate.js
 vendor/afire.js
+vendor/ui-bootstrap.js
 app/base.js
 app/controllers/nav_controller.js
 app/controllers/dashboard_controller.js
@@ -17,4 +18,5 @@ vendor/jquery.min.js
 vendor/moment.js
 vendor/flatuipro.min.js
 vendor/underscore.js
+app/directives/directives.js
 main.js
