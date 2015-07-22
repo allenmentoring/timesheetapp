@@ -1,4 +1,3 @@
-
 define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
   class DashBoardController
@@ -49,8 +48,8 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
           $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{str}/lessons"))
           $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{str}/submitted"))
 
-          minDate = new Date(startM.year(), startM.month(), startM.date())
-          maxDate = new Date(endM.year(), endM.month(), endM.date())
+          minDate = startM.toDate()
+          maxDate = endM.toDate()
 
           datepickerSelector = $('#datepicker-01')
           datepickerSelector.datepicker(
@@ -67,12 +66,14 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
             offset
           datepickerSelector.datepicker('widget').css 'margin-left': -datepickerSelector.prev('.input-group-btn').find('.btn').outerWidth() + 3
 
+          $scope.reRenderDatePicker()
+
       $scope.reRenderDatePicker = () ->
         startM = moment($scope.formattedStart, 'M/D/YY')
         endM = moment($scope.formattedEnd, 'M/D/YY')
 
-        minDate = new Date(startM.year(), startM.month(), startM.date())
-        maxDate = new Date(endM.year(), endM.month(), endM.date())
+        minDate = startM.toDate()
+        maxDate = endM.toDate()
         $('#datepicker-01').datepicker( "option", "maxDate", maxDate )
         $('#datepicker-01').datepicker( "option", "minDate", minDate )
         return
@@ -125,7 +126,7 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
       $scope.addLesson = () ->
         if $scope.lessonModel.student.id and $scope.lessonModel.length.length > 0 and $('#datepicker-01').val().length > 0
           currentTimeSheet = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
-          $scope.lessonModel.date = moment($('#datepicker-01').val(), 'M/D/YY').format("MMMM Do YYYY")
+          $scope.lessonModel.date = moment($('#datepicker-01').val(), 'M/D/YYYY').format("MMMM Do YYYY")
           $rootScope.currentUserRef.child("timesheets/#{currentTimeSheet}/lessons").push().set $scope.lessonModel
           $scope.lessonModel = {student: "", length: "", notes: ""}
 
