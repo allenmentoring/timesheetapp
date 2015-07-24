@@ -4,11 +4,16 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
     constructor: ($scope, $rootScope, $sce, FirebaseService, $window, $firebaseObject, $firebaseArray) ->
 
-      $scope.startDate = moment().date(5).startOf('day')
-      $scope.endDate = moment().date(5).endOf('day').add(13, 'd')
+      $scope.moment = moment
+      $scope.startDate = moment({ year :2015, month :6, day :2}).add(Math.floor((moment().diff(moment({ year :2015, month :6, day :2}), 'days'))/14)*13, 'd')
+      $scope.endDate = moment({ year :2015, month :6, day :2}).add(Math.ceil((moment().diff(moment({ year :2015, month :6, day :2}), 'days'))/14)*13, 'd')
+
 
       $scope.formattedStart = $scope.startDate.format('M/D/YY')
       $scope.formattedEnd = $scope.endDate.format('M/D/YY')
+
+      $scope.currentTimeSheetKey = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
+      $scope.currentPayPeriod = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
 
 
       $scope.lessonModel = {student: "", length: "", notes: ""}
@@ -16,7 +21,7 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
       FirebaseService.rootRef.child('students').once "value", (snap) ->
         students = []
         for k,v of snap.val()
-          students.push {id: k, name: "#{v.firstName} #{v.lastName}"}
+          students.push {id: k, name: "#{v.firstName} #{v.lastName}", parent: v.parent}
 
         $scope.$apply ->
           $scope.students = students
@@ -31,25 +36,63 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
 
 
+      $scope.nextPeriod = () ->
+        oldEndDate = $scope.endDate
+        $scope.startDate = oldEndDate
+        $scope.formattedStart = $scope.startDate.format('M/D/YY')
+
+        $scope.endDate = $scope.startDate.add(13, 'd')
+        $scope.formattedEnd = $scope.endDate.format('M/D/YY')
+
+        $scope.currentTimeSheetKey = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
+
+        $scope.reRenderDatePicker()
+
+        if $scope.currentDash == 'Mentor'
+          $scope.currentTimeSheet.$destroy() if $scope.currentTimeSheet
+          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons"))
+          $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/submitted"))
+
+
+      $scope.prevPeriod = () ->
+        $scope.startDate = moment($scope.formattedStart, 'M/D/YY').subtract(13, 'd')
+        $scope.formattedStart = $scope.startDate.format('M/D/YY')
+
+        $scope.endDate = moment($scope.formattedEnd, 'M/D/YY').subtract(13, 'd')
+        $scope.formattedEnd = $scope.endDate.format('M/D/YY')
+
+        $scope.currentTimeSheetKey = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
+
+        $scope.reRenderDatePicker()
+
+        if $scope.currentDash == 'Mentor'
+          $scope.currentTimeSheet.$destroy() if $scope.currentTimeSheet
+          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons"))
+          $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/submitted"))
+
+
+      $scope.reRenderDatePicker = () ->
+        minDate = $scope.startDate.toDate()
+        maxDate = $scope.endDate.toDate()
+        $('#datepicker-01').datepicker( "option", "maxDate", maxDate )
+        $('#datepicker-01').datepicker( "option", "minDate", minDate )
+        return
 
 
       $scope.loadDashboard = () ->
         if $rootScope.userBasic.manager
           $scope.selectedTab = 'TIMESHEETS'
           $scope.currentDash = 'Manager'
-          $scope.mentors = $firebaseObject(FirebaseService.rootRef.child('users').startAt('manager').endAt('manager'))
+          $scope.mentors = $firebaseObject(FirebaseService.rootRef.child('users').startAt('mentor').endAt('mentor'))
+
         else
           $scope.currentDash = 'Mentor'
 
-          startM = moment($scope.formattedStart, 'M/D/YY')
-          endM = moment($scope.formattedEnd, 'M/D/YY')
+          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons"))
+          $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/submitted"))
 
-          str = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
-          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{str}/lessons"))
-          $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{str}/submitted"))
-
-          minDate = startM.toDate()
-          maxDate = endM.toDate()
+          minDate = $scope.startDate.toDate()
+          maxDate = $scope.endDate.toDate()
 
           datepickerSelector = $('#datepicker-01')
           datepickerSelector.datepicker(
@@ -68,18 +111,6 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
           $scope.reRenderDatePicker()
 
-      $scope.reRenderDatePicker = () ->
-        startM = moment($scope.formattedStart, 'M/D/YY')
-        endM = moment($scope.formattedEnd, 'M/D/YY')
-
-        minDate = startM.toDate()
-        maxDate = endM.toDate()
-        $('#datepicker-01').datepicker( "option", "maxDate", maxDate )
-        $('#datepicker-01').datepicker( "option", "minDate", minDate )
-        return
-
-
-
       $scope.openTimesheetsTab = () ->
         $scope.selectedTab = 'TIMESHEETS'
 
@@ -90,59 +121,50 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
       $scope.openInvoicesTab = () ->
         $scope.selectedTab = 'INVOICES'
-
-
-      $scope.nextPeriod = () ->
-        oldEndDate = $scope.endDate
-        $scope.startDate = oldEndDate
-        $scope.formattedStart = $scope.startDate.format('M/D/YY')
-
-        $scope.endDate = $scope.startDate.add(13, 'd')
-        $scope.formattedEnd = $scope.endDate.format('M/D/YY')
-        $scope.reRenderDatePicker()
-
-        if $scope.currentDash == 'Mentor'
-          $scope.currentTimeSheet.$destroy() if $scope.currentTimeSheet
-          str = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
-          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{str}/lessons"))
-          $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{str}/submitted"))
-
-
-      $scope.prevPeriod = () ->
-        $scope.startDate = moment($scope.formattedStart, 'M/D/YY').subtract(13, 'd')
-        $scope.formattedStart = $scope.startDate.format('M/D/YY')
-
-        $scope.endDate = moment($scope.formattedEnd, 'M/D/YY').subtract(13, 'd')
-        $scope.formattedEnd = $scope.endDate.format('M/D/YY')
-        $scope.reRenderDatePicker()
-
-        if $scope.currentDash == 'Mentor'
-          $scope.currentTimeSheet.$destroy() if $scope.currentTimeSheet
-          str = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
-          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{str}/lessons"))
-          $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{str}/submitted"))
+        $scope.parents = $firebaseObject($rootScope.rootRef.child("parents"))
 
 
       $scope.addLesson = () ->
         if $scope.lessonModel.student.id and $scope.lessonModel.length.length > 0 and $('#datepicker-01').val().length > 0
-          currentTimeSheet = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
           $scope.lessonModel.date = moment($('#datepicker-01').val(), 'M/D/YYYY').format("MMMM Do YYYY")
-          $rootScope.currentUserRef.child("timesheets/#{currentTimeSheet}/lessons").push().set $scope.lessonModel
+          $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons").push().set $scope.lessonModel
           $scope.lessonModel = {student: "", length: "", notes: ""}
 
-
       $scope.removeLesson = (id) ->
-        str = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
-        $rootScope.currentUserRef.child("timesheets/#{str}/lessons/#{id}").set null
+        $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons/#{id}").set null
 
       $scope.submitTimeSheet = () ->
         result = confirm("Are you sure?")
         if result
-          str = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
-          $rootScope.currentUserRef.child("timesheets/#{str}/submitted").set true
+          $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/submitted").set true
+
+          totalTime = 0.00
+          angular.forEach $scope.currentTimeSheet, (value, key) ->
+            totalTime = totalTime + parseFloat(value.length)
+            $rootScope.rootRef.child("parents/#{value.student.parent.parentId}/invoices/#{$scope.currentTimeSheetKey}").push().set {date: value.date, studentName: value.student.name, length: value.length, notes: value.notes, mentorId: $rootScope.currentUid, mentorName: "#{$rootScope.userBasic.firstName} #{$rootScope.userBasic.lastName}"}
+
+          $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/totalTime").set totalTime
+          $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}").setPriority 'submitted'
 
 
+      $scope.manageMentor = (userid, mentor) ->
+        $scope.showManageMentor = true
+        $scope.showManageMentorObj = mentor
 
+
+      $scope.calculateTotalHoursForAParent = (lessons) ->
+        totalHours = 0
+        for k,v of lessons
+          totalHours = parseFloat(v.length) + totalHours
+        totalHours
+
+      $scope.manageParent = (userid, parent) ->
+        $scope.showManageParent = true
+        $scope.showManageParentObj = parent
+
+
+      $scope.checkCurrentPayPeriod = () ->
+        moment().isBetween($scope.startDate, $scope.endDate)
 
 
 

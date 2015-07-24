@@ -6,12 +6,11 @@
         h6(ng-show="currentDash=='Mentor'") MENTOR DASHBOARD
 
 
-    //p {{mentors | json}}
     .col-md-8.col-md-offset-2.mtl.text-center.ng-cloak(ng-show="!currentDash")
         i.icon-spin5.animate-spin.text-dark-gray.font20.mtl
 
     .col-md-8.col-md-offset-2.mtl.pan.bor.ng-cloak(ng-show="currentDash=='Manager'")
-        .col-md-12.bbs.pam
+        .col-md-12.bbs.pam(ng-class="currentPayPeriod == currentTimeSheetKey ? 'bg-warning' : ''")
             .col-md-3
                 i.icon-left-big.cursorp(ng-click='prevPeriod()')
             .col-md-2
@@ -23,44 +22,98 @@
             .col-md-3.text-right
                 i.icon-right-big.cursorp(ng-click='nextPeriod()')
 
-        .row.man.pan.dash-bars.ng-cloak(style='border-bottom:1px solid #ddd', g-if="userBasic.email == 'admin@gilders.in'")
-            .col-md-6.bbs.pan.text-center.cursorp.ng-cloak.brs(ng-click='openTimesheetsTab()', ng-class="selectedTab == 'TIMESHEETS' ? 'bg-grey-light text-primary' : 'text-6' ")
-                p.font18.mas
-                    i.icon-clock-1
-                    | Timesheets
+        .row.man.pan.dash-bars(style='border-bottom:1px solid #ddd')
 
-            .col-md-6.pan.bbs.text-center.cursorp.ng-cloak(ng-click='openInvoicesTab()', ng-class="selectedTab == 'INVOICES' ? 'bg-grey-light text-primary' : 'text-6' ")
-                p.font18.mas
-                    i.icon-money
-                    | Invoices
+            .col-md-12.pan.ng-cloak(ng-show="showManageMentor")
+                h5.text-center.text-dark-gray
+                    | {{showManageMentorObj.basic.firstName}} {{showManageMentorObj.basic.lastName}}
+                    .mrs.btn-default.btn.btn-xs.pull-right(ng-click="showManageMentor=false") Close
 
-
-            .col-md-12.pan
                 table.table.table-striped.table-hover.mtl.ptl
                     thead
                         tr
-                            th Mentor Name
-                            th Total Hours
+                            th Date
+                            th Student
+                            th Session Length
+                            th Description
                     tbody
-                        tr(ng-repeat="(userid, user) in managers")
-                            td {{user.basic.firstName}} {{user.basic.lastName}}
-                            td
+                        tr(ng-repeat="(lessonId, lesson) in showManageMentorObj.timesheets[currentTimeSheetKey].lessons", ng-if="showManageMentorObj.timesheets[currentTimeSheetKey].submitted")
+                            td {{moment(lesson.date, "MMMM Do YYYY").format('M/D/YY')}}
+                            td {{lesson.student.name}}
+                            td {{lesson.length}}
+                            td {{lesson.length}} hours with {{lesson.student.name.split(' ')[0]}} on {{moment(lesson.date, "MMMM Do YYYY").format('M/D')}}
 
-                        tr(ng-repeat="(userid, user) in users")
-                            td {{user.firstName}}
-                            td {{user.lastName}}
-                            td {{user.email}}
-                            td {{user.password}}
-                            td
-                                .btn.btn-xs(ng-class= "user.manager ? 'btn-primary' : 'btn-default'",ng-click='assignManager(user, userid)') Manager
-                            td
-                                .btn.btn-xs(ng-class= "user.mentor ? 'btn-primary' : 'btn-default'",ng-click='assignMentor(user, userid)') Mentor
-                            td
-                                .btn.btn-xs.btn-default(ng-click='sendEmail(user, userid)') Send Email
+
+            .col-md-12.pan.ng-cloak(ng-show="showManageParent")
+                h5.text-center.text-dark-gray
+                    | {{showManageParentObj.firstName}} {{showManageParentObj.lastName}}
+                    .mrs.btn-default.btn.btn-xs.pull-right(ng-click="showManageParent=false") Close
+
+                table.table.table-striped.table-hover.mtl.ptl
+                    thead
+                        tr
+                            th Date
+                            th Mentor
+                            th Length
+                            th Description
+                    tbody
+                        tr(ng-repeat="(lessonId, lesson) in showManageParentObj.invoices[currentTimeSheetKey]")
+                            td {{moment(lesson.date, "MMMM Do YYYY").format('M/D/YY')}}
+                            td {{lesson.mentorName}}
+                            td {{lesson.length}}
+                            td {{lesson.length}} hours with {{lesson.studentName.split(' ')[0]}} on {{moment(lesson.date, "MMMM Do YYYY").format('M/D')}}
+
+
+
+
+
+
+
+            .row.man.pan(ng-show="!showManageMentor && !showManageParent")
+
+                .col-md-6.bbs.pan.text-center.cursorp.ng-cloak.brs(ng-click='openTimesheetsTab()', ng-class="selectedTab == 'TIMESHEETS' ? 'bg-grey-light text-primary' : 'text-6' ")
+                    p.font18.mas
+                        i.icon-clock-1
+                        | Timesheets
+
+                .col-md-6.pan.bbs.text-center.cursorp.ng-cloak(ng-click='openInvoicesTab()', ng-class="selectedTab == 'INVOICES' ? 'bg-grey-light text-primary' : 'text-6' ")
+                    p.font18.mas
+                        i.icon-money
+                        | Invoices
+
+
+
+                .col-md-12.pan.ng-cloak(ng-show="selectedTab == 'INVOICES'")
+                    table.table.table-striped.table-hover.mtl.ptl
+                        thead
+                            tr
+                                th Parent Name
+                                th Total Hours
+                        tbody
+                            tr(ng-repeat="(userid, parent) in parents")
+                                td
+                                    a.cursorp(ng-click="manageParent(userid, parent)")
+                                        | {{parent.firstName}} {{parent.lastName}}
+                                td {{calculateTotalHoursForAParent(parent.invoices[currentTimeSheetKey])}}
+
+                .col-md-12.pan.ng-cloak(ng-show="selectedTab == 'TIMESHEETS'")
+                    table.table.table-striped.table-hover.mtl.ptl
+                        thead
+                            tr
+                                th Mentor Name
+                                th Total Hours
+                        tbody
+                            tr(ng-repeat="(userid, mentor) in mentors")
+                                td
+                                    a.cursorp(ng-click="manageMentor(userid, mentor)")
+                                        | {{mentor.basic.firstName}} {{mentor.basic.lastName}}
+                                td {{mentor.timesheets[currentTimeSheetKey].totalTime}}
+
+
 
 
     .col-md-8.col-md-offset-2.mtl.pan.bor.ng-cloak(ng-show="currentDash=='Mentor'")
-        .col-md-12.bbs.pam
+        .col-md-12.bbs.pam(ng-class="currentPayPeriod == currentTimeSheetKey ? 'bg-warning' : ''")
             .col-md-3
                 i.icon-left-big.cursorp(ng-click='prevPeriod()')
             .col-md-2
@@ -73,7 +126,7 @@
                 i.icon-right-big.cursorp(ng-click='nextPeriod()')
 
         .col-md-12.pan.ng-cloak.pal(ng-show='currentTimeSheetSubmitted.$value')
-            h4.text-center.text-dark-gray You have already submitted the timesheet for this period.
+            h4.text-center.text-dark-gray You have submitted the timesheet for this period.
 
         .col-md-12.pan.ng-cloak(ng-show='!currentTimeSheetSubmitted.$value')
             table.table.table-striped.table-hover.mtl.ptl
