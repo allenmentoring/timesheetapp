@@ -125,6 +125,9 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
 
       $scope.addLesson = () ->
+        unless $scope.lessonModel.student.id
+          alert 'Please select a student from the drop down menu.'
+
         if $scope.lessonModel.student.id and $scope.lessonModel.length.length > 0 and $('#datepicker-01').val().length > 0
           $scope.lessonModel.date = moment($('#datepicker-01').val(), 'M/D/YYYY').format("MMMM Do YYYY")
           $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons").push().set $scope.lessonModel
@@ -134,7 +137,7 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
         $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons/#{id}").set null
 
       $scope.submitTimeSheet = () ->
-        result = confirm("Are you sure?")
+        result = confirm("Are you sure? You are finalizing your timesheet for this pay period. This action cannot be undone.")
         if result
           $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/submitted").set true
 

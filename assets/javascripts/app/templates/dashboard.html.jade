@@ -41,7 +41,7 @@
                             td {{moment(lesson.date, "MMMM Do YYYY").format('M/D/YY')}}
                             td {{lesson.student.name}}
                             td {{lesson.length}}
-                            td {{lesson.length}} hours with {{lesson.student.name.split(' ')[0]}} on {{moment(lesson.date, "MMMM Do YYYY").format('M/D')}}
+                            td {{lesson.length}} {{lesson.length <= 1 ? 'hour' : 'hours'}}  with {{lesson.student.name.split(' ')[0]}} on {{moment(lesson.date, "MMMM Do YYYY").format('M/D')}}
 
 
             .col-md-12.pan.ng-cloak(ng-show="showManageParent")
@@ -61,7 +61,7 @@
                             td {{moment(lesson.date, "MMMM Do YYYY").format('M/D/YY')}}
                             td {{lesson.mentorName}}
                             td {{lesson.length}}
-                            td {{lesson.length}} hours with {{lesson.studentName.split(' ')[0]}} on {{moment(lesson.date, "MMMM Do YYYY").format('M/D')}}
+                            td {{lesson.length}} {{lesson.length <= 1 ? 'hour' : 'hours'}} with {{lesson.mentorName.split(' ')[0]}} on {{moment(lesson.date, "MMMM Do YYYY").format('M/D')}}
 
 
 
@@ -125,16 +125,14 @@
             .col-md-3.text-right
                 i.icon-right-big.cursorp(ng-click='nextPeriod()')
 
-        .col-md-12.pan.ng-cloak.pal(ng-show='currentTimeSheetSubmitted.$value')
-            h4.text-center.text-dark-gray You have submitted the timesheet for this period.
 
-        .col-md-12.pan.ng-cloak(ng-show='!currentTimeSheetSubmitted.$value')
+        .col-md-12.pan.ng-cloak
             table.table.table-striped.table-hover.mtl.ptl
                 thead
                     tr
                         th Date
                         th Student Name
-                        th Length
+                        th Length (Hours)
                         th Notes
                         th
                 tbody
@@ -144,8 +142,8 @@
                         td {{sheet.length}}
                         td {{sheet.notes}}
                         td
-                            .btn.btn-xs.btn-danger.icon-cancel(ng-click='removeLesson(sheetId)')
-                    tr
+                            .btn.btn-xs.btn-danger.icon-cancel(ng-click='removeLesson(sheetId)', ng-show='!currentTimeSheetSubmitted.$value')
+                    tr(ng-show='!currentTimeSheetSubmitted.$value')
                         td
                             .form-group.man
                                 .input-group
@@ -165,6 +163,8 @@
                         td
                             &nbsp;
 
+        .col-md-12.pan.ng-cloak.pan(ng-show='currentTimeSheetSubmitted.$value')
+            h4.man.pbl.text-center.text-dark-gray You have submitted the timesheet for this period.
 
         .col-md-12(ng-show='!currentTimeSheetSubmitted.$value')
             .col-md-6.pal
