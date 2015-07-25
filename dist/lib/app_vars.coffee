@@ -22,29 +22,34 @@ class AppVars
 
     if @options.app.settings.env == 'production'
       currentServer = ''
-#      rootUrl = 'https://prod-campaign.firebaseIO.com/'
-      rootUrl = 'https://dev-timesheet.firebaseIO.com/'
+
+      rootUrl = 'https://am-timesheets.firebaseio.com/'
 
       rootRef = new Firebase(rootUrl)
 
-      mailgunUser = "postmaster@gilders.in"
-      mailgunPassword = "17998c2efeb7d868f7585371773d1ace"
+#      mailgunUser = "postmaster@gilders.in"
+#      mailgunPassword = "17998c2efeb7d868f7585371773d1aeas"
+      mailgunUser = "postmaster@allenmentoring.com"
+      mailgunPassword = "92c5a30f29cba6e5923c23a2d7105cd8"
 
-      faceBookAppId = '476837515817492'
+      faceBookAppId = ''
 
       currentEnv = 'production'
 
 
     else
-      rootUrl = 'https://dev-timesheet.firebaseio.com'
+      rootUrl = 'https://am-timesheets.firebaseio.com/'
       rootRef = new Firebase(rootUrl)
 
       currentServer = 'http://localhost:3000'
 
-      mailgunUser = "postmaster@gilders.in"
-      mailgunPassword = "17998c2efeb7d868f7585371773d1ace"
+      mailgunUser = "postmaster@allenmentoring.com"
+      mailgunPassword = "92c5a30f29cba6e5923c23a2d7105cd8"
 
-      faceBookAppId = '476837515817492'
+#      mailgunUser = "postmaster@gilders.in"
+      #      mailgunPassword = "17998c2efeb7d868f7585371773d1aeas"
+
+      faceBookAppId = ''
 
 
       currentEnv = 'development'

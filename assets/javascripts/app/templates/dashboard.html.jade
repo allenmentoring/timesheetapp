@@ -2,7 +2,9 @@
     h4.text-center.text-dark-gray.ng-cloak(ng-show='roleNotSet') Please contact the admin to set a role for you.
 
     .col-md-12.pan.text-center.bg-grey-light.text-primary.mbl.mtl
-        h6(ng-show="currentDash=='Manager'") MANAGER DASHBOARD
+        h6(ng-show="currentDash=='Manager'")
+            | MANAGER DASHBOARD
+            a.btn.btn-xs.btn-primary.pull-right.mrl(href='/register', target='_blank') Register
         h6(ng-show="currentDash=='Mentor'") MENTOR DASHBOARD
 
 
@@ -37,7 +39,7 @@
                             th Session Length
                             th Description
                     tbody
-                        tr(ng-repeat="(lessonId, lesson) in showManageMentorObj.timesheets[currentTimeSheetKey].lessons", ng-if="showManageMentorObj.timesheets[currentTimeSheetKey].submitted")
+                        tr(ng-repeat="lesson in convertToArray(showManageMentorObj.timesheets[currentTimeSheetKey].lessons) | orderBy:'recordedDate'", ng-if="showManageMentorObj.timesheets[currentTimeSheetKey].submitted")
                             td {{moment(lesson.date, "MMMM Do YYYY").format('M/D/YY')}}
                             td {{lesson.student.name}}
                             td {{lesson.length}}
@@ -57,7 +59,7 @@
                             th Length
                             th Description
                     tbody
-                        tr(ng-repeat="(lessonId, lesson) in showManageParentObj.invoices[currentTimeSheetKey]")
+                        tr(ng-repeat="lesson in convertToArray(showManageParentObj.invoices[currentTimeSheetKey]) | orderBy:'recordedDate'")
                             td {{moment(lesson.date, "MMMM Do YYYY").format('M/D/YY')}}
                             td {{lesson.mentorName}}
                             td {{lesson.length}}
@@ -136,13 +138,13 @@
                         th Notes
                         th
                 tbody
-                    tr(ng-repeat="(sheetId, sheet) in currentTimeSheet")
+                    tr(ng-repeat="sheet in currentTimeSheet | orderBy: 'recordedDate'")
                         td {{sheet.date}}
                         td {{sheet.student.name}}
                         td {{sheet.length}}
                         td {{sheet.notes}}
                         td
-                            .btn.btn-xs.btn-danger.icon-cancel(ng-click='removeLesson(sheetId)', ng-show='!currentTimeSheetSubmitted.$value')
+                            .btn.btn-xs.btn-danger.icon-cancel(ng-click='removeLesson($id)', ng-show='!currentTimeSheetSubmitted.$value')
                     tr(ng-show='!currentTimeSheetSubmitted.$value')
                         td
                             .form-group.man

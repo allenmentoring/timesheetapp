@@ -1,4 +1,3 @@
-
 define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
   class DashBoardController
@@ -6,8 +5,8 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
     constructor: ($scope, $rootScope, $sce, FirebaseService, $window, $firebaseObject, $firebaseArray) ->
 
       $scope.moment = moment
-      $scope.startDate = moment({ year :2015, month :6, day :2}).add(Math.floor((moment().diff(moment({ year :2015, month :6, day :2}), 'days'))/14)*13, 'd')
-      $scope.endDate = moment({ year :2015, month :6, day :2}).add(Math.ceil((moment().diff(moment({ year :2015, month :6, day :2}), 'days'))/14)*13, 'd')
+      $scope.startDate = moment({ year :2015, month :6, day :5}).add(Math.floor((moment().diff(moment({ year :2015, month :6, day :5}), 'days'))/14)*13, 'd')
+      $scope.endDate = moment({ year :2015, month :6, day :5}).add(Math.ceil((moment().diff(moment({ year :2015, month :6, day :5}), 'days'))/14)*13, 'd')
 
 
       $scope.formattedStart = $scope.startDate.format('M/D/YY')
@@ -39,7 +38,7 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
       $scope.nextPeriod = () ->
         oldEndDate = $scope.endDate
-        $scope.startDate = oldEndDate
+        $scope.startDate = oldEndDate.add(1, 'd')
         $scope.formattedStart = $scope.startDate.format('M/D/YY')
 
         $scope.endDate = $scope.startDate.add(13, 'd')
@@ -56,10 +55,10 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
 
       $scope.prevPeriod = () ->
-        $scope.startDate = moment($scope.formattedStart, 'M/D/YY').subtract(13, 'd')
+        $scope.startDate = moment($scope.formattedStart, 'M/D/YY').subtract(14, 'd')
         $scope.formattedStart = $scope.startDate.format('M/D/YY')
 
-        $scope.endDate = moment($scope.formattedEnd, 'M/D/YY').subtract(13, 'd')
+        $scope.endDate = moment($scope.formattedEnd, 'M/D/YY').subtract(14, 'd')
         $scope.formattedEnd = $scope.endDate.format('M/D/YY')
 
         $scope.currentTimeSheetKey = "#{moment($scope.formattedStart, 'M/D/YY').format("MMMM Do YYYY")}-#{moment($scope.formattedEnd, 'M/D/YY').format("MMMM Do YYYY")}"
@@ -89,7 +88,7 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
         else
           $scope.currentDash = 'Mentor'
 
-          $scope.currentTimeSheet = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons"))
+          $scope.currentTimeSheet = $firebaseArray($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons"))
           $scope.currentTimeSheetSubmitted = $firebaseObject($rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/submitted"))
 
           minDate = $scope.startDate.toDate()
@@ -131,7 +130,9 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
         if $scope.lessonModel.student.id and $scope.lessonModel.length.length > 0 and $('#datepicker-01').val().length > 0
           $scope.lessonModel.date = moment($('#datepicker-01').val(), 'M/D/YYYY').format("MMMM Do YYYY")
-          $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons").push().set $scope.lessonModel
+          lessonRef = $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/lessons").push()
+          lessonRef.set $scope.lessonModel
+          lessonRef.child('recordedDate').set moment($('#datepicker-01').val(), 'M/D/YYYY').unix()
           $scope.lessonModel = {student: "", length: "", notes: ""}
 
       $scope.removeLesson = (id) ->
@@ -145,7 +146,7 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
           totalTime = 0.00
           angular.forEach $scope.currentTimeSheet, (value, key) ->
             totalTime = totalTime + parseFloat(value.length)
-            $rootScope.rootRef.child("parents/#{value.student.parent.parentId}/invoices/#{$scope.currentTimeSheetKey}").push().set {date: value.date, studentName: value.student.name, length: value.length, notes: value.notes, mentorId: $rootScope.currentUid, mentorName: "#{$rootScope.userBasic.firstName} #{$rootScope.userBasic.lastName}"}
+            $rootScope.rootRef.child("parents/#{value.student.parent.parentId}/invoices/#{$scope.currentTimeSheetKey}").push().set {recordedDate: value.recordedDate,date: value.date, studentName: value.student.name, length: value.length, notes: value.notes, mentorId: $rootScope.currentUid, mentorName: "#{$rootScope.userBasic.firstName} #{$rootScope.userBasic.lastName}"}
 
           $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}/totalTime").set totalTime
           $rootScope.currentUserRef.child("timesheets/#{$scope.currentTimeSheetKey}").setPriority 'submitted'
@@ -170,6 +171,9 @@ define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
       $scope.checkCurrentPayPeriod = () ->
         moment().isBetween($scope.startDate, $scope.endDate)
 
+
+      $scope.convertToArray = (obj) ->
+        _.toArray(obj)
 
 
 
