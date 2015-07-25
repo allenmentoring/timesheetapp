@@ -56,16 +56,17 @@ html
 
   body.bg-white
 
-      nav.bg-white.navbar.navbar-default.brn.pas.bbs(role="navigation")
+      nav.bg-white.navbar.navbar-default.brn.pas(role="navigation")
           .navbar-header
               button.navbar-toggle(type="button", data-toggle="collapse", data-target="#navbar-collapse-01")
                   span.sr-only Toggle navigation
               a.navbar-brand.pbl.ptn.pln.prn(href='/')
                   .row.man.pan
                       .col-md-3.pts.pln
-                          img(src="/stylesheets/Icons/SVG/clocks.svg" alt="" width='40px')
-                      .col-md-6.pln.ptm.text-dark-gray2
-                          span TimesheetApp
+                          //img(src="/stylesheets/Icons/SVG/clocks.svg" alt="" width='40px')
+                          img(src="/stylesheets/img/bannervector.png" alt="", width="220px")
+                      .col-md-12.pln.text-dark-gray
+                          p.font20.pull-left.light-weight.pll Timesheets
                           //p.mlm.font10.mbn.text-dark-gray &nbsp;&nbsp;BETA
           #navbar-collapse-01.collapse.navbar-collapse(ng-controller="NavBarController")
               a.btn-xs.button.btn.btn-default.navbar-btn.btn-sm.pull-right.btn-embossed.mls.ng-cloak(ng-show="!loggedIn", href='/sign-in') Sign in

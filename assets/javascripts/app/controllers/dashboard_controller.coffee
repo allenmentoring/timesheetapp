@@ -1,3 +1,4 @@
+
 define ['app/base','angularjs', 'fbase'], (TimeSheetApp) ->
 
   class DashBoardController
