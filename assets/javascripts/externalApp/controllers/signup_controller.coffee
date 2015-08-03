@@ -47,7 +47,13 @@ define ['externalApp/base','angularjs', 'fbase'], (CampaignCtrlApp) ->
                 usrRef.setPriority 'mentor'
                 $scope.$apply ->
                   $scope.alertInfo = {spinner: false, alert: true, alertMsg: "User added successfully."}
-                FirebaseService.rootRef.child("queues/sendCredentialsEmail").push().set {userId: userData.uid}
+
+
+        $scope.createNewParent = (newParentForm) ->
+          if newParentForm.$valid
+            parentRef = FirebaseService.rootRef.child('parents').push()
+            parentRef.set {firstName: $scope.parent.firstName, lastName: $scope.parent.lastName}
+
 
 
 

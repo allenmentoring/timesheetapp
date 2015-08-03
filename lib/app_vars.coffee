@@ -24,6 +24,7 @@ class AppVars
       currentServer = ''
 
       rootUrl = 'https://am-timesheets.firebaseio.com/'
+#      rootUrl = 'https://dev-timesheet.firebaseio.com'
 
       rootRef = new Firebase(rootUrl)
 
@@ -39,6 +40,7 @@ class AppVars
 
     else
       rootUrl = 'https://am-timesheets.firebaseio.com/'
+#      rootUrl = 'https://dev-timesheet.firebaseio.com'
       rootRef = new Firebase(rootUrl)
 
       currentServer = 'http://localhost:3000'
